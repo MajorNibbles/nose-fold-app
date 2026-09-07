@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Camera, RefreshCw, X, Check } from 'lucide-react'
+import { fileToOptimizedDataUrl } from '../utils/imageUtils'
 
 interface CameraCaptureModalProps {
   isOpen: boolean
@@ -13,6 +14,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   onCapture,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
   const [error, setError] = useState<string | null>(null)
@@ -28,23 +30,50 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   const startCamera = async (mode: 'user' | 'environment') => {
     stopStream()
     setError(null)
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      setError('Live camera requires HTTPS or localhost. Tap below to use camera.')
+      return
+    }
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: mode,
-          width: { ideal: 1280 },
-          height: { ideal: 1280 },
-        },
-        audio: false,
-      })
+      let mediaStream: MediaStream
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: mode },
+          audio: false,
+        })
+      } catch {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        })
+      }
       setStream(mediaStream)
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
       }
-    } catch (err) {
-      setError(
-        'Could not access camera. Please make sure permissions are granted, or upload a photo instead.'
-      )
+    } catch {
+      setError('Tap below to take a photo with your camera.')
+    }
+  }
+
+  const handleNativeCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const optimized = await fileToOptimizedDataUrl(file, 900)
+      onCapture(optimized.dataUrl)
+      onClose()
+    } catch {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          onCapture(event.target.result as string)
+          onClose()
+        }
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      e.target.value = ''
     }
   }
 
@@ -107,8 +136,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             <h3 className="font-semibold text-white text-lg">Take a Photo</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -116,8 +146,29 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
 
         {/* Viewfinder Area */}
         <div className="relative aspect-square w-full bg-black flex items-center justify-center overflow-hidden">
+          <input
+            ref={nativeCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handleNativeCapture}
+            className="hidden"
+          />
           {error ? (
-            <div className="p-6 text-center text-rose-400 text-sm">{error}</div>
+            <div className="p-6 text-center flex flex-col items-center gap-3">
+              <p className="text-slate-300 text-sm max-w-xs">{error}</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  nativeCameraInputRef.current?.click()
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-xs shadow-lg transition active:scale-95 cursor-pointer"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Open Camera</span>
+              </button>
+            </div>
           ) : hasCaptured ? (
             <img
               src={hasCaptured}
@@ -135,14 +186,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                   facingMode === 'user' ? 'scale-x-[-1]' : ''
                 }`}
               />
-              {/* Funny Face guide overlay */}
-              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center border-[3px] border-dashed border-cyan-400/40 rounded-full mx-14 my-10">
-                <div className="w-16 h-8 border-2 border-dotted border-pink-400/70 rounded-full mb-4 flex items-center justify-center">
-                  <span className="text-[10px] text-pink-300 font-mono tracking-wider">NOSE</span>
-                </div>
-                <span className="text-xs text-cyan-300/80 bg-slate-900/70 px-3 py-1 rounded-full font-medium shadow">
-                  Center face &amp; nose here
-                </span>
+              {/* Subtle face guide oval */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-64 h-80 border-2 border-dashed border-cyan-400/40 rounded-full" />
               </div>
             </>
           )}
@@ -153,15 +199,17 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
           {hasCaptured ? (
             <>
               <button
+                type="button"
                 onClick={retake}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 Retake
               </button>
               <button
+                type="button"
                 onClick={confirmSnapshot}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold shadow-lg shadow-emerald-500/20 transition"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold shadow-lg shadow-emerald-500/20 transition cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 Use Photo
@@ -170,16 +218,18 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
           ) : (
             <>
               <button
+                type="button"
                 onClick={flipCamera}
                 title="Switch front/back camera"
-                className="p-3.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                className="p-3.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
               <button
+                type="button"
                 onClick={takeSnapshot}
                 title="Capture Photo"
-                className="w-16 h-16 rounded-full bg-white border-4 border-slate-700 flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg"
+                className="w-16 h-16 rounded-full bg-white border-4 border-slate-700 flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-full bg-cyan-400" />
               </button>

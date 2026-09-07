@@ -16,6 +16,7 @@ import {
   createTransitionGIF,
   createBeforeAfterSnapGIF,
   createSideBySideSnapshot,
+  drawFaceFoldWatermark,
 } from '../utils/gifExport'
 import type { ColumnFoldMap } from '../types/fold'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
@@ -79,10 +80,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const blob = await createTransitionGIF(
         srcCanvas,
         foldMap,
-        { showCreaseShadow, trimToFoldHeight, targetWidth: 360 },
+        { showCreaseShadow, trimToFoldHeight: false, anchorTop: true, targetWidth: 360 },
         (pct) => setTransitionProgress(pct)
       )
-      downloadFile(blob, `nose-fold-transition-${Date.now()}.gif`)
+      downloadFile(blob, `facefold-loop-${Date.now()}.gif`)
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
       soundManager.playFoldSound(true)
     } finally {
@@ -99,10 +100,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const blob = await createBeforeAfterSnapGIF(
         srcCanvas,
         foldMap,
-        { showCreaseShadow, trimToFoldHeight, targetWidth: 380 },
+        { showCreaseShadow, trimToFoldHeight: false, anchorTop: true, targetWidth: 380 },
         (pct) => setSnapProgress(pct)
       )
-      downloadFile(blob, `nose-fold-before-after-snap-${Date.now()}.gif`)
+      downloadFile(blob, `facefold-snap-${Date.now()}.gif`)
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
       soundManager.playPaperCrease()
     } finally {
@@ -118,7 +119,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       trimToFoldHeight,
     })
     const dataUrl = compCanvas.toDataURL('image/png')
-    downloadFile(dataUrl, `nose-fold-comparison-${Date.now()}.png`)
+    downloadFile(dataUrl, `facefold-split-${Date.now()}.png`)
     confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
     soundManager.playPaperCrease()
   }
@@ -134,8 +135,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         showCreaseShadow,
         trimToFoldHeight,
       })
+      const outCtx = canvas.getContext('2d')
+      if (outCtx) {
+        drawFaceFoldWatermark(outCtx, 16, 16)
+      }
       const dataUrl = canvas.toDataURL('image/png')
-      downloadFile(dataUrl, `nose-folded-${Date.now()}.png`)
+      downloadFile(dataUrl, `facefold-${Date.now()}.png`)
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
     }
   }
@@ -152,6 +157,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           showCreaseShadow,
           trimToFoldHeight,
         })
+        const outCtx = canvas.getContext('2d')
+        if (outCtx) {
+          drawFaceFoldWatermark(outCtx, 16, 16)
+        }
         canvas.toBlob(async (blob) => {
           if (!blob) return
           await navigator.clipboard.write([
@@ -195,7 +204,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' })
-        downloadFile(blob, `nose-fold-video-${Date.now()}.webm`)
+        downloadFile(blob, `facefold-video-${Date.now()}.webm`)
         setIsExportingVideo(false)
       }
 
@@ -221,6 +230,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           trimToFoldHeight,
         })
 
+        const animCtx = animCanvas.getContext('2d')
+        if (animCtx) {
+          drawFaceFoldWatermark(animCtx, 16, 16)
+        }
+
         currentFrame++
         setVideoProgress(Math.round((currentFrame / totalFrames) * 100))
         setTimeout(step, 1000 / fps)
@@ -239,11 +253,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-pink-400" />
-            <h3 className="font-bold text-white text-lg">Download &amp; Export Options</h3>
+            <h3 className="font-bold text-white text-base">Save &amp; Share</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -255,7 +269,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <button
             onClick={handleExportTransitionGIF}
             disabled={isExportingTransition}
-            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-slate-900 hover:from-cyan-950/90 hover:to-slate-850 border border-cyan-500/40 flex items-center justify-between group transition active:scale-98 disabled:opacity-60"
+            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-slate-900 hover:from-cyan-950/90 hover:to-slate-850 border border-cyan-500/40 flex items-center justify-between group transition active:scale-98 disabled:opacity-60 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition shrink-0">
@@ -267,15 +281,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-bold text-white text-sm flex items-center gap-1.5">
-                  <span>Transition Animated GIF</span>
+                  <span>Loop GIF</span>
                   <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-mono">
                     .GIF
                   </span>
                 </div>
                 <div className="text-xs text-slate-400">
                   {isExportingTransition
-                    ? `Generating smooth GIF frames (${transitionProgress}%)...`
-                    : 'Smooth looping fold & unfold animation'}
+                    ? `Creating (${transitionProgress}%)...`
+                    : 'Smooth animation'}
                 </div>
               </div>
             </div>
@@ -288,7 +302,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <button
             onClick={handleExportSnapGIF}
             disabled={isExportingSnap}
-            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-pink-950/60 to-slate-900 hover:from-pink-950/90 hover:to-slate-850 border border-pink-500/40 flex items-center justify-between group transition active:scale-98 disabled:opacity-60"
+            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-pink-950/60 to-slate-900 hover:from-pink-950/90 hover:to-slate-850 border border-pink-500/40 flex items-center justify-between group transition active:scale-98 disabled:opacity-60 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center group-hover:scale-105 transition shrink-0">
@@ -300,15 +314,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-bold text-white text-sm flex items-center gap-1.5">
-                  <span>Before &amp; After Snap GIF</span>
+                  <span>Snap GIF</span>
                   <span className="text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full font-mono">
-                    Meme GIF
+                    Meme
                   </span>
                 </div>
                 <div className="text-xs text-slate-400">
                   {isExportingSnap
-                    ? `Encoding snap GIF (${snapProgress}%)...`
-                    : '2-frame rapid flip between Original & Folded face'}
+                    ? `Creating (${snapProgress}%)...`
+                    : 'Flip animation'}
                 </div>
               </div>
             </div>
@@ -320,45 +334,45 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {/* OPTION 3: Side-by-Side Snapshot Photo */}
           <button
             onClick={handleExportSideBySide}
-            className="w-full p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between group transition active:scale-98"
+            className="w-full p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between group transition active:scale-98 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-105 transition shrink-0">
                 <Columns className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-white text-sm">Before &amp; After Split Photo</div>
-                <div className="text-xs text-slate-400">Side-by-side comparison image (PNG)</div>
+                <div className="font-bold text-white text-sm">Split Photo</div>
+                <div className="text-xs text-slate-400">Side-by-side PNG</div>
               </div>
             </div>
             <span className="text-xs font-bold text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
-              Save PNG
+              Save
             </span>
           </button>
 
           {/* OPTION 4: Single Folded Picture (PNG) */}
           <button
             onClick={handleDownloadImage}
-            className="w-full p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between group transition active:scale-98"
+            className="w-full p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-between group transition active:scale-98 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center group-hover:scale-105 transition shrink-0">
                 <ImageIcon className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-white text-sm">Single Folded Photo</div>
-                <div className="text-xs text-slate-400">High-resolution folded picture</div>
+                <div className="font-bold text-white text-sm">Save Photo</div>
+                <div className="text-xs text-slate-400">High quality PNG</div>
               </div>
             </div>
             <span className="text-xs font-semibold text-slate-300 bg-slate-750 px-3 py-1 rounded-lg">
-              Download
+              Save
             </span>
           </button>
 
           {/* OPTION 5: Copy to Clipboard */}
           <button
             onClick={handleCopyToClipboard}
-            className="w-full p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 flex items-center justify-between group transition active:scale-98"
+            className="w-full p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 flex items-center justify-between group transition active:scale-98 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
@@ -366,9 +380,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-semibold text-white text-xs">
-                  {copied ? 'Copied to Clipboard!' : 'Copy to Clipboard'}
+                  {copied ? 'Copied to Clipboard!' : 'Copy Photo'}
                 </div>
-                <div className="text-[11px] text-slate-400">Paste directly into WhatsApp / Discord</div>
               </div>
             </div>
             <span className="text-xs font-semibold text-purple-300">
@@ -380,7 +393,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <button
             onClick={handleExportVideo}
             disabled={isExportingVideo}
-            className="w-full p-3 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 flex items-center justify-between group transition active:scale-98 disabled:opacity-60"
+            className="w-full p-3 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 flex items-center justify-between group transition active:scale-98 disabled:opacity-60 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-700/60 text-slate-400 flex items-center justify-center shrink-0">
@@ -388,13 +401,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-semibold text-slate-300 text-xs">
-                  {isExportingVideo ? `Recording Video (${videoProgress}%)...` : 'Export Video Clip (WebM)'}
+                  {isExportingVideo ? `Recording (${videoProgress}%)...` : 'Video'}
                 </div>
-                <div className="text-[11px] text-slate-500">Video format for mobile players</div>
+                <div className="text-[11px] text-slate-500">WebM clip</div>
               </div>
             </div>
             <span className="text-xs font-semibold text-slate-400">
-              {isExportingVideo ? 'Working' : 'Video'}
+              {isExportingVideo ? 'Working' : 'Get Video'}
             </span>
           </button>
         </div>

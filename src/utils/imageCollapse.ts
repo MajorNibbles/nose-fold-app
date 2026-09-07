@@ -5,6 +5,7 @@ export interface RenderOptions {
   showCreaseShadow: boolean
   trimToFoldHeight: boolean
   canvasBgColor?: string
+  anchorTop?: boolean // When true, anchors the top so the face folds UP, leaving black space below
 }
 
 /**
@@ -18,7 +19,7 @@ export function renderFoldedCanvas(
 ) {
   const width = sourceCtx.canvas.width
   const height = sourceCtx.canvas.height
-  const { foldProgress, showCreaseShadow, trimToFoldHeight } = options
+  const { foldProgress, showCreaseShadow, trimToFoldHeight, anchorTop = false } = options
 
   // Get raw pixels of source image
   const sourceImageData = sourceCtx.getImageData(0, 0, width, height)
@@ -45,18 +46,20 @@ export function renderFoldedCanvas(
   const destImageData = targetCtx.createImageData(width, destHeight)
   const dstData = destImageData.data
 
-  // Clear / fill background if full frame
-  if (!trimToFoldHeight && collapsedAmount > 0) {
+  // Clear / fill background with solid black if full frame
+  if (!trimToFoldHeight) {
+    const isTransparent = options.canvasBgColor === 'transparent'
+    const bgA = isTransparent ? 0 : 255
     for (let i = 0; i < dstData.length; i += 4) {
-      dstData[i] = 18      // R
-      dstData[i + 1] = 20  // G
-      dstData[i + 2] = 30  // B
-      dstData[i + 3] = 0   // Transparent
+      dstData[i] = 0       // R: 0 (Pure Black)
+      dstData[i + 1] = 0   // G: 0
+      dstData[i + 2] = 0   // B: 0
+      dstData[i + 3] = bgA // Alpha: 255 (Opaque)
     }
   }
 
-  // Vertical offset if centered in full frame
-  const yOffset = trimToFoldHeight ? 0 : Math.round(collapsedAmount * 0.5)
+  // Vertical offset: 0 if anchored at top or trimmed, otherwise centered
+  const yOffset = trimToFoldHeight || anchorTop ? 0 : Math.round(collapsedAmount * 0.5)
 
   for (let x = 0; x < width; x++) {
     const yTop = foldMap.yTop[x]

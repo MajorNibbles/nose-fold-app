@@ -41,3 +41,67 @@ export async function normalizeImage(
     img.src = dataUrl
   })
 }
+
+/**
+ * Reads a File/Blob directly using URL.createObjectURL and scales it down
+ * immediately to maxDimension on an offscreen canvas.
+ * This prevents high-res 12MP-48MP mobile camera photos from causing memory spikes
+ * that trigger mobile browser tab crashes or page reloads.
+ */
+export async function fileToOptimizedDataUrl(
+  file: File | Blob,
+  maxDimension: number = 1000
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  const objectUrl = URL.createObjectURL(file)
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || 600
+        let height = img.naturalHeight || 800
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width)
+            width = maxDimension
+          } else {
+            width = Math.round((width * maxDimension) / height)
+            height = maxDimension
+          }
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          throw new Error('Failed to obtain canvas context')
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+        const scaledDataUrl = canvas.toDataURL('image/jpeg', 0.90)
+
+        // Free memory explicitly
+        canvas.width = 0
+        canvas.height = 0
+
+        resolve({ dataUrl: scaledDataUrl, width, height })
+      } catch (err) {
+        reject(err)
+      } finally {
+        URL.revokeObjectURL(objectUrl)
+      }
+    }
+
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl)
+      reject(err)
+    }
+
+    img.src = objectUrl
+  })
+}
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Smartphone, Copy, Check, Wifi } from 'lucide-react'
+import { X, Smartphone, Copy, Check } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 
 interface PhoneConnectModalProps {
@@ -12,7 +12,7 @@ export const PhoneConnectModal: React.FC<PhoneConnectModalProps> = ({
   onClose,
 }) => {
   const publicUrl = 'https://majornibbles.github.io/nose-fold-app/'
-  const [activeTab, setActiveTab] = useState<'public' | 'local'>('public')
+  const [activeTab, setActiveTab] = useState<'public' | 'local'>('local')
   const [localUrl, setLocalUrl] = useState<string>('http://192.168.1.3:5173/')
   const [copied, setCopied] = useState(false)
 
@@ -28,7 +28,7 @@ export const PhoneConnectModal: React.FC<PhoneConnectModalProps> = ({
     }
   }, [isOpen])
 
-  const activeUrl = activeTab === 'public' ? publicUrl : localUrl
+  const activeUrl = activeTab === 'local' ? localUrl : publicUrl
 
   const handleCopy = () => {
     navigator.clipboard.writeText(activeUrl)
@@ -44,7 +44,7 @@ export const PhoneConnectModal: React.FC<PhoneConnectModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition"
+          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -55,33 +55,33 @@ export const PhoneConnectModal: React.FC<PhoneConnectModalProps> = ({
         </div>
 
         <div>
-          <h3 className="font-bold text-white text-lg">Open on your Phone</h3>
+          <h3 className="font-bold text-white text-base">Open on Phone</h3>
           <p className="text-xs text-slate-400 mt-1">
-            Scan the QR code with your phone camera to open and play anywhere!
+            Scan with your phone camera
           </p>
         </div>
 
         {/* Tab Switcher */}
         <div className="w-full bg-slate-950 p-1 rounded-xl flex items-center border border-slate-800 text-xs font-semibold">
           <button
-            onClick={() => setActiveTab('public')}
-            className={`flex-1 py-1.5 rounded-lg transition ${
-              activeTab === 'public'
-                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            🌍 Public Web
-          </button>
-          <button
             onClick={() => setActiveTab('local')}
-            className={`flex-1 py-1.5 rounded-lg transition ${
+            className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
               activeTab === 'local'
                 ? 'bg-cyan-600 text-white shadow'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            📶 Local Wi-Fi
+            📶 Wi-Fi
+          </button>
+          <button
+            onClick={() => setActiveTab('public')}
+            className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
+              activeTab === 'public'
+                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            🌍 Web
           </button>
         </div>
 
@@ -101,28 +101,11 @@ export const PhoneConnectModal: React.FC<PhoneConnectModalProps> = ({
           <span className="truncate text-left">{activeUrl}</span>
           <button
             onClick={handleCopy}
-            className="p-1 text-slate-400 hover:text-white rounded transition shrink-0"
+            className="p-1 text-slate-400 hover:text-white rounded transition shrink-0 cursor-pointer"
             title="Copy URL"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
           </button>
-        </div>
-
-        {/* Info Message */}
-        <div className="w-full text-left bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 flex flex-col gap-1.5">
-          {activeTab === 'public' ? (
-            <div className="flex items-start gap-2 text-pink-300/90">
-              <span className="shrink-0">✨</span>
-              <span>
-                <strong>Live on GitHub Pages:</strong> Share this link with anyone, anywhere in the world. No Wi-Fi or computer needed!
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2">
-              <Wifi className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-              <span>Connect phone to the same home Wi-Fi network as this PC for local dev.</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

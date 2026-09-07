@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react'
 import type { Point, Stroke, FoldMode } from '../types/fold'
 import { strokeToColumnY } from '../utils/curveUtils'
 import { soundManager } from '../utils/soundEffects'
-import { RotateCcw, Sparkles, Check, ArrowRight, Wand2, ZoomIn, Crop } from 'lucide-react'
+import { RotateCcw, ArrowRight, ZoomIn, ArrowLeft, Sparkles } from 'lucide-react'
 
 interface DrawingCanvasProps {
   imageSrc: string
@@ -13,8 +13,7 @@ interface DrawingCanvasProps {
   onTopStrokeChange: (stroke: Stroke) => void
   onBottomStrokeChange: (stroke: Stroke) => void
   onFoldReady: () => void
-  onAutoPlaceLines: () => void
-  onOpenCrop: () => void
+  onBack: () => void
 }
 
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
@@ -22,12 +21,11 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   topStroke,
   bottomStroke,
   foldMode,
-  onFoldModeChange,
+  onFoldModeChange: _onFoldModeChange,
   onTopStrokeChange,
   onBottomStrokeChange,
   onFoldReady,
-  onAutoPlaceLines,
-  onOpenCrop,
+  onBack,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -118,7 +116,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       stroke: Stroke,
       color: string,
       glowColor: string,
-      label: string,
       isActive: boolean
     ) => {
       if (stroke.length < 2) return
@@ -155,33 +152,24 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ctx.arc(pStart.x, pStart.y, 6, 0, Math.PI * 2)
       ctx.arc(pEnd.x, pEnd.y, 6, 0, Math.PI * 2)
       ctx.fill()
-
-      // Label badge
-      const midPoint = stroke[Math.floor(stroke.length / 2)]
-      ctx.font = 'bold 12px monospace'
-      ctx.fillStyle = color
-      ctx.textAlign = 'center'
-      ctx.fillText(label, midPoint.x, midPoint.y - 12)
-
       ctx.restore()
     }
-
     // Render Top Line (Cyan)
     if (topStroke.length > 1 && !(activeLine === 'top' && isDrawing)) {
-      renderStroke(topStroke, '#06b6d4', 'rgba(6, 182, 212, 0.8)', 'LINE 1 (TOP)', activeLine === 'top')
+      renderStroke(topStroke, '#06b6d4', 'rgba(6, 182, 212, 0.8)', activeLine === 'top')
     }
 
     // Render Bottom Line (Pink)
     if (bottomStroke.length > 1 && !(activeLine === 'bottom' && isDrawing)) {
-      renderStroke(bottomStroke, '#ec4899', 'rgba(236, 72, 153, 0.8)', 'LINE 2 (BOTTOM)', activeLine === 'bottom')
+      renderStroke(bottomStroke, '#ec4899', 'rgba(236, 72, 153, 0.8)', activeLine === 'bottom')
     }
 
     // Render currently drawing stroke
     if (isDrawing && currentStroke.length > 1) {
       if (activeLine === 'top') {
-        renderStroke(currentStroke, '#06b6d4', 'rgba(6, 182, 212, 0.9)', 'LINE 1', true)
+        renderStroke(currentStroke, '#06b6d4', 'rgba(6, 182, 212, 0.9)', true)
       } else {
-        renderStroke(currentStroke, '#ec4899', 'rgba(236, 72, 153, 0.9)', 'LINE 2', true)
+        renderStroke(currentStroke, '#ec4899', 'rgba(236, 72, 153, 0.9)', true)
       }
     }
   }, [image, topStroke, bottomStroke, activeLine, isDrawing, currentStroke, foldMode])
@@ -407,52 +395,58 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   return (
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
       {/* Step Instruction Banner */}
-      <div className="w-full mb-3 px-4 py-2.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-2.5">
+      <div className="w-full mb-3 px-3.5 py-2 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-2">
           <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-md ${
+            className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm shadow-md ${
               activeLine === 'top'
-                ? 'bg-cyan-500 text-slate-950 shadow-cyan-500/30 ring-2 ring-cyan-400/50'
-                : 'bg-pink-500 text-white shadow-pink-500/30 ring-2 ring-pink-400/50'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
             }`}
           >
-            {activeLine === 'top' ? '1' : '2'}
+            {activeLine === 'top' ? '👁️' : '👄'}
           </div>
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              {activeLine === 'top' ? 'Step 1: Top Fold Line' : 'Step 2: Bottom Fold Line'}
-            </div>
-            <div className="text-sm font-medium text-slate-200">
-              {activeLine === 'top'
-                ? 'Draw a squiggly line across the top of the nose bridge'
-                : 'Draw a squiggly line across the bottom of the nose'}
-            </div>
-          </div>
+          <span className="text-xs font-bold text-slate-200">
+            {activeLine === 'top' ? 'Eye Line' : 'Mouth Line'}
+          </span>
         </div>
 
         {/* Line Selector Buttons */}
-        <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+        <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
           <button
+            type="button"
             onClick={() => setActiveLine('top')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               activeLine === 'top'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Line 1 {topStroke.length > 1 ? '✓' : ''}
+            Eye Line {topStroke.length > 1 ? '✓' : ''}
           </button>
           <button
+            type="button"
             onClick={() => setActiveLine('bottom')}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               activeLine === 'bottom'
-                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/50'
+                ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Line 2 {bottomStroke.length > 1 ? '✓' : ''}
+            Mouth Line {bottomStroke.length > 1 ? '✓' : ''}
           </button>
         </div>
+      </div>
+
+      {/* Drawing Tip Banner */}
+      <div className="w-full mb-3 px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center gap-2 text-center text-xs text-amber-200/90 shadow-sm transition-all duration-200">
+        <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <span>
+          <strong className="text-amber-300 font-semibold">Tip:</strong>{' '}
+          {activeLine === 'top'
+            ? 'For best results, get the line as close to the bottom of the eyes as possible'
+            : 'For best results, get the line as close to the top of the mouth as possible'}
+        </span>
       </div>
 
       {/* Main Canvas Viewport */}
@@ -474,14 +468,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           />
         ) : (
           <div className="text-slate-500 text-sm animate-pulse">Loading photo...</div>
-        )}
-
-        {/* Floating helper badge on canvas if not yet drawn */}
-        {topStroke.length === 0 && !isDrawing && (
-          <div className="absolute top-4 pointer-events-none bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full border border-cyan-500/30 text-xs text-cyan-300 font-medium shadow-xl flex items-center gap-2 animate-bounce">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            Use your finger or mouse to draw across the nose!
-          </div>
         )}
 
         {/* Precision Magnifying Glass Loupe (Follows finger, floats above) */}
@@ -521,120 +507,76 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                   }`}
                 />
               </div>
-
-              {/* Floating Loupe Badge */}
-              <div
-                className={`absolute left-1/2 -translate-x-1/2 text-[9px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap ${
-                  pos.isFlippedBelow ? '-bottom-5' : '-top-5'
-                } ${
-                  activeLine === 'top'
-                    ? 'bg-cyan-950/95 text-cyan-300 border border-cyan-500/40'
-                    : 'bg-pink-950/95 text-pink-300 border border-pink-500/40'
-                }`}
-              >
-                Aiming Loupe • 2.2x
-              </div>
             </div>
           )
         })()}
       </div>
 
-      {/* Toolbar beneath canvas */}
-      <div className="w-full mt-3 flex flex-wrap items-center justify-between gap-2.5 px-2">
+      {/* Secondary Tools below canvas (Back, Redraw, Clear, Zoom) */}
+      <div className="w-full mt-3 flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
+          {/* Back to Step 1 */}
           <button
-            onClick={onOpenCrop}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-pink-300 text-xs font-medium border border-pink-500/30 transition shadow"
-            title="Crop & frame photo"
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 cursor-pointer"
+            title="Back to photo"
           >
-            <Crop className="w-3.5 h-3.5 text-pink-400" />
-            Crop
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back</span>
           </button>
+
+          {/* Redraw line */}
           <button
-            onClick={onAutoPlaceLines}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition shadow"
-            title="Automatically place sample fold lines across the nose"
-          >
-            <Wand2 className="w-3.5 h-3.5 text-amber-400" />
-            Auto Lines
-          </button>
-          <button
+            type="button"
             onClick={handleClearCurrent}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700/60 transition"
-            title="Redraw current active line"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/70 hover:bg-slate-750 text-slate-300 text-xs font-medium border border-slate-700/80 transition cursor-pointer"
+            title="Redraw current line"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Redraw {activeLine === 'top' ? 'Line 1' : 'Line 2'}
+            <span>Redraw</span>
           </button>
+
+          {/* Reset all lines */}
           <button
+            type="button"
             onClick={handleClearAll}
-            className="px-2.5 py-2 text-slate-400 hover:text-rose-400 text-xs font-medium transition"
+            className="px-2.5 py-2 text-slate-400 hover:text-rose-400 text-xs font-medium transition cursor-pointer"
           >
-            Reset
-          </button>
-
-          {/* Fold Span Selector */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
-            <button
-              onClick={() => onFoldModeChange('full-paper')}
-              className={`px-2 py-1 rounded-md font-medium transition ${
-                foldMode === 'full-paper'
-                  ? 'bg-slate-800 text-cyan-300 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-              title="Fold across the whole paper (like TikTok paper fold)"
-            >
-              Paper Fold
-            </button>
-            <button
-              onClick={() => onFoldModeChange('local-pinch')}
-              className={`px-2 py-1 rounded-md font-medium transition ${
-                foldMode === 'local-pinch'
-                  ? 'bg-slate-800 text-pink-300 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-              title="Fold only the nose area"
-            >
-              Local Pinch
-            </button>
-          </div>
-
-          {/* Loupe Magnifier Toggle */}
-          <button
-            onClick={() => setShowLoupe(!showLoupe)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
-              showLoupe
-                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                : 'bg-slate-800/60 border-slate-700 text-slate-500'
-            }`}
-            title="Toggle magnifying loupe above finger while drawing"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Loupe {showLoupe ? 'ON' : 'OFF'}</span>
+            Clear
           </button>
         </div>
 
-        {/* Next / Fold Button */}
+        {/* Loupe Magnifier Toggle */}
         <button
-          onClick={onFoldReady}
-          disabled={!bothLinesDrawn}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold text-sm shadow-xl transition transform active:scale-95 ${
-            bothLinesDrawn
-              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 text-white shadow-pink-500/25 hover:opacity-95 hover:shadow-cyan-500/25'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+          type="button"
+          onClick={() => setShowLoupe(!showLoupe)}
+          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer ${
+            showLoupe
+              ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+              : 'bg-slate-800/60 border-slate-700 text-slate-500'
           }`}
+          title="Toggle zoom loupe"
         >
-          {bothLinesDrawn ? (
-            <>
-              <Check className="w-4 h-4" />
-              Collapse &amp; Fold Face!
-              <ArrowRight className="w-4 h-4" />
-            </>
-          ) : (
-            <>Draw Both Lines to Fold</>
-          )}
+          <ZoomIn className="w-3.5 h-3.5" />
+          <span>Zoom</span>
         </button>
       </div>
+
+      {/* Primary Action: Full-Width Fold Button (Identical styling to Add Line button) */}
+      <button
+        type="button"
+        disabled={!bothLinesDrawn}
+        onClick={onFoldReady}
+        className={`w-full mt-3 py-3.5 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition select-none ${
+          bothLinesDrawn
+            ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/20 transform active:scale-98 cursor-pointer'
+            : 'bg-slate-800/60 text-slate-500 border border-slate-700/50 cursor-not-allowed opacity-50 shadow-none'
+        }`}
+      >
+        <span>Fold</span>
+        <ArrowRight className="w-5 h-5" />
+      </button>
     </div>
   )
 }

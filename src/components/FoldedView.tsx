@@ -2,10 +2,9 @@ import React, { useRef, useEffect, useState } from 'react'
 import type { ColumnFoldMap } from '../types/fold'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
 import { soundManager } from '../utils/soundEffects'
-import { downloadFile } from '../utils/gifExport'
+import { downloadFile, drawFaceFoldWatermark } from '../utils/gifExport'
 import confetti from 'canvas-confetti'
 import {
-  ArrowLeftRight,
   Sparkles,
   Maximize2,
   Minimize2,
@@ -106,9 +105,17 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
     const activeCanvas = fullscreenCanvasRef.current || canvasRef.current
     if (!activeCanvas) return
 
-    const isFolded = foldProgress > 0.5
-    const dataUrl = activeCanvas.toDataURL('image/png')
-    downloadFile(dataUrl, `nose-fold-${isFolded ? 'folded' : 'original'}-${Date.now()}.png`)
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = activeCanvas.width
+    exportCanvas.height = activeCanvas.height
+    const expCtx = exportCanvas.getContext('2d')
+    if (!expCtx) return
+
+    expCtx.drawImage(activeCanvas, 0, 0)
+    drawFaceFoldWatermark(expCtx, 16, 16)
+
+    const dataUrl = exportCanvas.toDataURL('image/png')
+    downloadFile(dataUrl, `facefold-${Date.now()}.png`)
 
     confetti({
       particleCount: 40,
@@ -146,8 +153,6 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
     onToggleBeforeAfter()
   }
 
-  const isFolded = foldProgress > 0.5
-
   return (
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto select-none">
       {/* Visual Canvas Container */}
@@ -160,74 +165,23 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
           className="w-full h-full object-contain transition-transform duration-75"
         />
 
-        {/* Top-Left: Floating status tag */}
+        {/* Top-Left: FaceFold badge */}
         <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
-          <div
-            className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg transition-colors flex items-center gap-1.5 ${
-              isFolded
-                ? 'bg-pink-500/90 text-white shadow-pink-500/30'
-                : 'bg-cyan-500/90 text-slate-950 shadow-cyan-500/30'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{isFolded ? 'AFTER (Folded)' : 'BEFORE (Original)'}</span>
+          <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-md text-white/90 border border-white/10 shadow-lg flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+            <span>FaceFold</span>
           </div>
         </div>
 
-        {/* Top-Right: Quick Download, GIF Modal & Fullscreen Buttons */}
+        {/* Top-Right: Fullscreen Button */}
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          {/* GIF Export Modal Button */}
-          {onOpenExport && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onOpenExport()
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-xl backdrop-blur-md border border-pink-500/40 bg-pink-950/80 hover:bg-pink-900 text-pink-300 transition active:scale-95"
-              title="Download Transition or Snap GIF"
-            >
-              <Film className="w-3.5 h-3.5 text-pink-400" />
-              <span>GIF</span>
-            </button>
-          )}
-
-          {/* Quick Download Button */}
-          <button
-            onClick={handleQuickDownload}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-xl backdrop-blur-md border transition active:scale-95 ${
-              downloadSuccess
-                ? 'bg-emerald-500 text-white border-emerald-400'
-                : 'bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border-cyan-500/40 hover:border-cyan-400'
-            }`}
-            title="Download high-resolution image"
-          >
-            {downloadSuccess ? (
-              <>
-                <Check className="w-3.5 h-3.5" />
-                <span>Saved!</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Download</span>
-              </>
-            )}
-          </button>
-
-          {/* Full Screen Button */}
           <button
             onClick={handleToggleFullscreen}
-            className="p-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md transition active:scale-95"
-            title="Enter Full Screen Mode"
+            className="p-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer"
+            title="Full Screen"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Tap to Toggle Badge */}
-        <div className="absolute bottom-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-700 text-xs text-slate-300 font-medium shadow-xl flex items-center gap-2 group-hover:scale-105 transition">
-          <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Tap anywhere to toggle Before / After</span>
         </div>
       </div>
 
@@ -239,16 +193,10 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
         >
           {/* Top Bar */}
           <div className="w-full max-w-4xl mx-auto flex items-center justify-between z-10">
-            {/* Status indicator */}
-            <div
-              className={`px-4 py-1.5 rounded-full text-xs font-black tracking-wider uppercase shadow-xl flex items-center gap-2 ${
-                isFolded
-                  ? 'bg-pink-500 text-white shadow-pink-500/30'
-                  : 'bg-cyan-500 text-slate-950 shadow-cyan-500/30'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{isFolded ? 'Folded (After) 😆' : 'Original (Before) 😐'}</span>
+            {/* Minimal Brand indicator */}
+            <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-900/90 text-white border border-slate-700/80 shadow-xl flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+              <span>FaceFold</span>
             </div>
 
             {/* Actions: GIF, Download & Close */}
@@ -256,8 +204,8 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
               {onOpenExport && (
                 <button
                   onClick={onOpenExport}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-xs font-bold shadow-xl active:scale-95 transition"
-                  title="Export animated or snapshot GIF"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-xs font-bold shadow-xl active:scale-95 transition cursor-pointer"
+                  title="Export GIF or Photo"
                 >
                   <Film className="w-4 h-4" />
                   <span>Get GIF</span>
@@ -266,7 +214,7 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
 
               <button
                 onClick={handleQuickDownload}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-xl active:scale-95 transition"
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-xl active:scale-95 transition cursor-pointer"
               >
                 {downloadSuccess ? (
                   <>
@@ -276,14 +224,14 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
                 ) : (
                   <>
                     <Download className="w-4 h-4" />
-                    <span>Download Photo</span>
+                    <span>Save</span>
                   </>
                 )}
               </button>
 
               <button
                 onClick={handleToggleFullscreen}
-                className="p-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 shadow-xl active:scale-95 transition"
+                className="p-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 shadow-xl active:scale-95 transition cursor-pointer"
                 title="Exit Full Screen"
               >
                 <Minimize2 className="w-5 h-5" />
@@ -299,16 +247,11 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
             />
           </div>
 
-          {/* Bottom Bar: Instructions & Quick Controls */}
+          {/* Bottom Bar: Quick Controls */}
           <div
             className="w-full max-w-lg mx-auto flex flex-col items-center gap-2 z-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-xs text-slate-400 font-medium flex items-center gap-2 bg-slate-900/80 px-4 py-1.5 rounded-full border border-slate-800 shadow">
-              <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Tap screen to flap open / fold closed</span>
-            </div>
-
             {/* Quick Fullscreen Scrubber */}
             <div className="w-full flex items-center gap-3 bg-slate-900/90 border border-slate-800 px-4 py-2 rounded-2xl shadow-xl">
               <Sliders className="w-4 h-4 text-pink-400 shrink-0" />

@@ -6,7 +6,11 @@ export interface GifExportOptions {
   showCreaseShadow: boolean
   trimToFoldHeight: boolean
   targetWidth?: number
+  beforeDelay?: number
+  afterDelay?: number
+  anchorTop?: boolean
 }
+
 
 /**
  * Creates a smooth looping animated GIF of the accordion fold transition.
@@ -47,20 +51,37 @@ export async function createTransitionGIF(
 
   const frameCanvas = document.createElement('canvas')
 
-  // Keyframe progress schedule: Fold down -> Pause -> Fold up -> Pause
-  const progresses = [
-    { t: 0.0, delay: 350 },
-    { t: 0.15, delay: 60 },
-    { t: 0.35, delay: 60 },
-    { t: 0.6, delay: 60 },
-    { t: 0.85, delay: 60 },
-    { t: 1.0, delay: 400 },
-    { t: 0.85, delay: 60 },
-    { t: 0.6, delay: 60 },
-    { t: 0.35, delay: 60 },
-    { t: 0.15, delay: 60 },
-    { t: 0.0, delay: 350 },
-  ]
+  // Smooth ease-in-out curve for natural, organic folding motion
+  const easeInOutCubic = (x: number): number => {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2
+  }
+
+  const intermediateSteps = 16 // 16 silky smooth frames per fold
+  const frameDelay = 40        // 40ms per frame (~25 fps visual rate)
+  const unfoldedHold = 2000    // Hold unfolded for 2.0 seconds
+  const foldedHold = 2400      // Hold folded for 2.4 seconds
+
+  const progresses: { t: number; delay: number }[] = []
+
+  // 1. Hold Unfolded (Original face)
+  progresses.push({ t: 0.0, delay: unfoldedHold })
+
+  // 2. Smoothly Fold Up (0 -> 1)
+  for (let i = 1; i <= intermediateSteps; i++) {
+    const fraction = i / (intermediateSteps + 1)
+    const t = easeInOutCubic(fraction)
+    progresses.push({ t: Math.round(t * 1000) / 1000, delay: frameDelay })
+  }
+
+  // 3. Hold Folded (Funny squished face)
+  progresses.push({ t: 1.0, delay: foldedHold })
+
+  // 4. Smoothly Unfold Down (1 -> 0)
+  for (let i = intermediateSteps; i >= 1; i--) {
+    const fraction = i / (intermediateSteps + 1)
+    const t = easeInOutCubic(fraction)
+    progresses.push({ t: Math.round(t * 1000) / 1000, delay: frameDelay })
+  }
 
   for (let i = 0; i < progresses.length; i++) {
     const { t, delay } = progresses[i]
@@ -68,11 +89,16 @@ export async function createTransitionGIF(
     renderFoldedCanvas(scaledSrcCtx, frameCanvas, scaledFoldMap, {
       foldProgress: t,
       showCreaseShadow: options.showCreaseShadow,
-      trimToFoldHeight: options.trimToFoldHeight,
+      trimToFoldHeight: false, // Keep constant full frame for GIF
+      anchorTop: true,         // Anchor top so chin folds UP, leaving space below
+      canvasBgColor: '#000000', // Crisp solid black space below the fold
     })
 
     const frameCtx = frameCanvas.getContext('2d')
     if (!frameCtx) continue
+
+    // Watermark in top left
+    drawFaceFoldWatermark(frameCtx, 12, 12)
 
     const { data, width, height } = frameCtx.getImageData(0, 0, frameCanvas.width, frameCanvas.height)
     const palette = quantize(data, 256)
@@ -88,7 +114,7 @@ export async function createTransitionGIF(
     }
 
     // Allow UI thread to breathe
-    await new Promise((r) => setTimeout(r, 8))
+    await new Promise((r) => setTimeout(r, 6))
   }
 
   gif.finish()
@@ -133,39 +159,44 @@ export async function createBeforeAfterSnapGIF(
 
   const frameCanvas = document.createElement('canvas')
 
-  // Frame 1: BEFORE (Original)
+  const beforeDelay = options.beforeDelay ?? 750
+  const afterDelay = options.afterDelay ?? 2400
+
+  // Frame 1: Original Face
   renderFoldedCanvas(scaledCtx, frameCanvas, scaledFoldMap, {
     foldProgress: 0.0,
     showCreaseShadow: false,
-    trimToFoldHeight: options.trimToFoldHeight,
+    trimToFoldHeight: false,
+    anchorTop: true,
+    canvasBgColor: '#000000',
   })
-  // Draw BEFORE badge
   const ctx1 = frameCanvas.getContext('2d')!
-  drawBadge(ctx1, 'BEFORE (ORIGINAL)', '#06b6d4')
+  drawFaceFoldWatermark(ctx1, 14, 14)
   let imgData = ctx1.getImageData(0, 0, frameCanvas.width, frameCanvas.height)
   let palette = quantize(imgData.data, 256)
   let index = applyPalette(imgData.data, palette)
   gif.writeFrame(index, frameCanvas.width, frameCanvas.height, {
     palette,
-    delay: 850, // 850ms hold
+    delay: beforeDelay, // 750ms quick look at original face
   })
   if (onProgress) onProgress(50)
 
-  // Frame 2: AFTER (Folded)
+  // Frame 2: Folded Face
   renderFoldedCanvas(scaledCtx, frameCanvas, scaledFoldMap, {
     foldProgress: 1.0,
     showCreaseShadow: options.showCreaseShadow,
-    trimToFoldHeight: options.trimToFoldHeight,
+    trimToFoldHeight: false,
+    anchorTop: true,
+    canvasBgColor: '#000000',
   })
-  // Draw AFTER badge
   const ctx2 = frameCanvas.getContext('2d')!
-  drawBadge(ctx2, 'AFTER (FOLDED) 😆', '#ec4899')
+  drawFaceFoldWatermark(ctx2, 14, 14)
   imgData = ctx2.getImageData(0, 0, frameCanvas.width, frameCanvas.height)
   palette = quantize(imgData.data, 256)
   index = applyPalette(imgData.data, palette)
   gif.writeFrame(index, frameCanvas.width, frameCanvas.height, {
     palette,
-    delay: 850, // 850ms hold
+    delay: afterDelay, // 2400ms (2.4s) extended hold on the funny folded face
   })
   if (onProgress) onProgress(100)
 
@@ -174,7 +205,7 @@ export async function createBeforeAfterSnapGIF(
 }
 
 /**
- * Creates a single side-by-side composite photo (Left: Before, Right: After)
+ * Creates a single side-by-side composite photo (Left: Original, Right: Folded)
  */
 export function createSideBySideSnapshot(
   sourceCanvas: HTMLCanvasElement,
@@ -191,6 +222,8 @@ export function createSideBySideSnapshot(
     foldProgress: 1.0,
     showCreaseShadow: options.showCreaseShadow,
     trimToFoldHeight: options.trimToFoldHeight,
+    anchorTop: true,
+    canvasBgColor: '#000000',
   })
 
   // Composite canvas: 2 side-by-side panels
@@ -206,11 +239,10 @@ export function createSideBySideSnapshot(
   // Draw Left: Original
   const leftY = (compCanvas.height - h) / 2
   ctx.drawImage(sourceCanvas, 0, leftY)
-  drawBadge(ctx, 'BEFORE', '#06b6d4', 20, 24)
 
   // Draw Center Divider Line
   ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 3
+  ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(w, 0)
   ctx.lineTo(w, compCanvas.height)
@@ -219,39 +251,56 @@ export function createSideBySideSnapshot(
   // Draw Right: Folded
   const rightY = (compCanvas.height - foldedCanvas.height) / 2
   ctx.drawImage(foldedCanvas, w, rightY)
-  drawBadge(ctx, 'AFTER 😆', '#ec4899', w + 20, 24)
+
+  // Watermark in top left
+  drawFaceFoldWatermark(ctx, 16, 16)
 
   return compCanvas
 }
 
-// Helper to draw clean badges on frames
-function drawBadge(
+/**
+ * Draws the clean, minimal "FaceFold" watermark pill in the top-left of any canvas.
+ * Responsively scales to fit small GIFs and high-resolution photos alike.
+ */
+export function drawFaceFoldWatermark(
   ctx: CanvasRenderingContext2D,
-  text: string,
-  color: string,
   x: number = 14,
-  y: number = 20
+  y: number = 14
 ) {
   ctx.save()
-  ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, sans-serif'
-  const metrics = ctx.measureText(text)
-  const padX = 10
-  const padY = 5
-  const boxW = metrics.width + padX * 2
-  const boxH = 22
+  const canvasW = ctx.canvas?.width || 400
+  const scale = Math.max(1, Math.min(3.5, canvasW / 400))
+  const fontSize = Math.round(12 * scale)
+  const padX = Math.round(8 * scale)
+  const boxH = Math.round(22 * scale)
+  const radius = Math.round(6 * scale)
+  const actualX = Math.round(x * (scale > 1.5 ? scale * 0.75 : 1))
+  const actualY = Math.round(y * (scale > 1.5 ? scale * 0.75 : 1))
 
-  ctx.fillStyle = 'rgba(11, 14, 20, 0.85)'
+  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+  const text = 'FaceFold'
+  const metrics = ctx.measureText(text)
+  const boxW = metrics.width + padX * 2
+
+  // Translucent dark glass pill
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
   ctx.beginPath()
-  ctx.roundRect ? ctx.roundRect(x, y - padY, boxW, boxH, 6) : ctx.rect(x, y - padY, boxW, boxH)
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(actualX, actualY, boxW, boxH, radius)
+  } else {
+    ctx.rect(actualX, actualY, boxW, boxH)
+  }
   ctx.fill()
 
-  ctx.strokeStyle = color
-  ctx.lineWidth = 1.5
+  // Subtle border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
+  ctx.lineWidth = Math.max(1, Math.round(1 * scale))
   ctx.stroke()
 
-  ctx.fillStyle = color
+  // Text
+  ctx.fillStyle = '#ffffff'
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, x + padX, y + boxH / 2 - padY)
+  ctx.fillText(text, actualX + padX, actualY + boxH / 2)
   ctx.restore()
 }
 
