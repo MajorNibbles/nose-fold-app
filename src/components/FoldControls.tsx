@@ -18,6 +18,7 @@ import {
   Rocket,
 } from 'lucide-react'
 import { soundManager } from '../utils/soundEffects'
+import { shareFaceFoldApp } from '../utils/shareUtils'
 import confetti from 'canvas-confetti'
 import type { ColumnFoldMap } from '../types/fold'
 import {
@@ -233,35 +234,11 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
   // 6. Share FaceFold App with Friends
   const handleShareWithFriends = async () => {
     soundManager.playPaperCrease()
-    const shareUrl = typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : ''
-    const shareText = "Check out this hilarious new app that lets you fold your face! 😂👃"
-
-    // Try Native Web Share API first (opens WhatsApp, Messages, etc. directly on iOS & Android)
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: 'FaceFold',
-          text: shareText,
-          url: shareUrl,
-        })
-        return
-      } catch (err: any) {
-        if (err.name === 'AbortError') return
-      }
+    const res = await shareFaceFoldApp()
+    if (res.success && res.method !== 'native') {
+      setShareFeedback('Opened WhatsApp! Message & link copied to clipboard.')
+      setTimeout(() => setShareFeedback(null), 4000)
     }
-
-    // Direct WhatsApp share fallback
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`
-
-    try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
-      }
-    } catch {}
-
-    window.open(whatsappUrl, '_blank')
-    setShareFeedback('Opened WhatsApp! Message & link copied to clipboard.')
-    setTimeout(() => setShareFeedback(null), 4000)
   }
 
   return (
