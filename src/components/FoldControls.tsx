@@ -558,34 +558,60 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
               </button>
             </div>
 
-            {/* Copy to Clipboard Bar & Quick Share Photo */}
-            <div className="flex items-center gap-2 w-full">
+            {/* Copy to Clipboard & Quick Share Photo (With matching logo cards) */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-2.5 w-full">
+              {/* Copy Photo Card */}
               <button
                 type="button"
                 onClick={handleCopyToClipboard}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center justify-between text-xs transition active:scale-98 cursor-pointer"
+                className="flex-1 p-3 rounded-2xl bg-gradient-to-r from-purple-950/60 to-slate-850 hover:from-purple-950/90 hover:to-slate-800 border border-purple-500/40 flex items-center justify-between group transition active:scale-98 text-left cursor-pointer"
                 title="Copy photo to clipboard (pastes as a normal photo in WhatsApp, not a sticker)"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="text-slate-300 truncate">
-                    {copied ? 'Copied Photo!' : 'Copy Photo'}
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
+                    {copied ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-purple-400" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                      <span>Copy Photo</span>
+                      <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded font-mono">
+                        Normal Photo
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {copied ? '✓ Pastes as photo in WhatsApp' : 'Pastes as photo in WhatsApp'}
+                    </div>
+                  </div>
                 </div>
-                <span className="font-mono text-[11px] text-purple-300 shrink-0 ml-1">
-                  {copied ? '✓ Pastes as Photo' : 'Copy'}
+                <span className="text-[11px] font-bold text-purple-300 bg-purple-500/20 px-2.5 py-1 rounded-lg border border-purple-500/30 shrink-0">
+                  {copied ? 'Copied!' : 'Copy'}
                 </span>
               </button>
 
+              {/* Share Photo Card (When supported) */}
               {canSharePhoto && (
                 <button
                   type="button"
                   onClick={handleSharePhoto}
-                  className="py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 text-xs text-slate-300 hover:text-white transition active:scale-98 cursor-pointer shrink-0"
+                  className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-slate-850 hover:from-emerald-950/90 hover:to-slate-800 border border-emerald-500/40 flex items-center justify-between sm:justify-center gap-2.5 group transition active:scale-98 text-left cursor-pointer shrink-0"
                   title="Share photo directly to WhatsApp, Messages, or AirDrop"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Share Photo</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Share2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="sm:hidden">
+                      <div className="font-bold text-white text-xs">Share Photo</div>
+                      <div className="text-[11px] text-slate-400">WhatsApp / AirDrop</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-lg border border-emerald-500/30 shrink-0">
+                    Share
+                  </span>
                 </button>
               )}
             </div>

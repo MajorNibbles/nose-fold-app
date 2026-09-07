@@ -28,12 +28,14 @@ export const Header: React.FC<HeaderProps> = ({ onRestart }) => {
   }
 
   return (
-    <header className="relative w-full max-w-2xl mx-auto flex items-center justify-center py-1.5 mb-2 select-none">
-      {/* Centered FaceFold Logo */}
-      <FaceFoldLogo onClick={onRestart} animated={true} />
+    <header className="w-full max-w-2xl mx-auto flex items-center justify-between py-1.5 mb-2 px-1 select-none">
+      {/* FaceFold Logo on the Left */}
+      <div className="flex items-center">
+        <FaceFoldLogo onClick={onRestart} animated={true} />
+      </div>
 
       {/* Top Right "Share FaceFold" Button with Little Logo Badge */}
-      <div className="absolute right-0 flex items-center">
+      <div className="relative flex items-center">
         <button
           type="button"
           onClick={handleShare}
