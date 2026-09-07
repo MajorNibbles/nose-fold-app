@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   ChevronDown,
   Share2,
+  Rocket,
 } from 'lucide-react'
 import { soundManager } from '../utils/soundEffects'
 import confetti from 'canvas-confetti'
@@ -63,6 +64,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
   const [copied, setCopied] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [isDownloadExpanded, setIsDownloadExpanded] = useState(false)
+  const [isBoosted, setIsBoosted] = useState(false)
   const [shareFeedback, setShareFeedback] = useState<string | null>(null)
 
   const isExpanded = isDownloadExpanded || isExportingTransition || isExportingSnap
@@ -89,7 +91,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
       if (!startTime) startTime = timestamp
       const elapsed = timestamp - startTime
       const phase = (elapsed % periodMs) / periodMs
-      const progress = 0.5 * (1 - Math.cos(phase * Math.PI * 2))
+      const maxFold = isBoosted ? 1.6 : 1.0
+      const progress = (maxFold * 0.5) * (1 - Math.cos(phase * Math.PI * 2))
       onFoldProgressChange(progress)
 
       animationFrameId = requestAnimationFrame(step)
@@ -100,7 +103,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId)
     }
-  }, [isPlaying, onFoldProgressChange])
+  }, [isPlaying, isBoosted, onFoldProgressChange])
 
   // Helper to load source image on canvas
   const getSourceCanvas = async (): Promise<HTMLCanvasElement> => {
@@ -271,8 +274,14 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
             <span className="flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-pink-400" />
               <span>Fold:</span>
-              <span className="font-mono text-cyan-300 text-[11px] bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800 ml-1">
-                {Math.round(foldProgress * 100)}%
+              <span
+                className={`font-mono text-[11px] px-2 py-0.5 rounded-md border ml-1 transition-all ${
+                  foldProgress > 1.0
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20'
+                    : 'bg-slate-950 text-cyan-300 border-slate-800'
+                }`}
+              >
+                {Math.round(foldProgress * 100)}%{foldProgress > 1.0 ? ' 🚀' : ''}
               </span>
             </span>
 
@@ -295,26 +304,35 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
           <input
             type="range"
             min="0"
-            max="1"
+            max={isBoosted ? '2' : '1'}
             step="0.01"
             value={foldProgress}
             onChange={(e) => {
               if (isPlaying) setIsPlaying(false)
-              onFoldProgressChange(parseFloat(e.target.value))
+              const val = parseFloat(e.target.value)
+              if (val > 1.0 && !isBoosted) {
+                setIsBoosted(true)
+              }
+              onFoldProgressChange(val)
             }}
-            className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-pink-500 focus:outline-none mt-1"
+            className={`w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none mt-1 transition-all ${
+              foldProgress > 1.0 ? 'accent-amber-400' : 'accent-pink-500'
+            }`}
           />
 
           <div className="flex justify-between text-[10px] text-slate-500 font-mono">
             <span>0%</span>
-            <span>50%</span>
-            <span>100%</span>
+            <span>{isBoosted ? '100%' : '50%'}</span>
+            <span className={isBoosted ? 'text-amber-400 font-bold' : ''}>
+              {isBoosted ? '200% 🚀' : '100%'}
+            </span>
           </div>
         </div>
 
-        {/* Secondary Toggle: Crease */}
+        {/* Secondary Toggles: Crease & Boost */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
           <button
+            type="button"
             onClick={() => onToggleCreaseShadow(!showCreaseShadow)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition cursor-pointer ${
               showCreaseShadow
@@ -324,6 +342,36 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Crease</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundManager.playFoldSound(true)
+              setIsBoosted((prev) => {
+                const next = !prev
+                if (next) {
+                  onFoldProgressChange(Math.max(1.35, foldProgress))
+                } else if (foldProgress > 1.0) {
+                  onFoldProgressChange(1.0)
+                }
+                return next
+              })
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold transition active:scale-95 cursor-pointer ${
+              isBoosted
+                ? 'bg-gradient-to-r from-amber-500/25 to-rose-500/25 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/20'
+                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+            title="Boost fold past 100%"
+          >
+            <Rocket className="w-3.5 h-3.5 text-amber-400" />
+            <span>Boost</span>
+            {isBoosted && (
+              <span className="text-[10px] text-amber-300 font-mono bg-amber-500/20 px-1 rounded">
+                200%
+              </span>
+            )}
           </button>
         </div>
       </div>

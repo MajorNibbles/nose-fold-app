@@ -88,7 +88,10 @@ export function renderFoldedCanvas(
         }
       }
 
-      if (srcY < 0 || srcY >= height) continue
+      if (srcY < 0) continue
+      if (srcY >= height) {
+        srcY = height - 1.001
+      }
 
       // Pixel indices
       const floorY = Math.floor(srcY)
