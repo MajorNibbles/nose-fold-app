@@ -6,6 +6,7 @@ import {
   Square,
   ArrowRight,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react'
 import { fileToOptimizedDataUrl } from '../utils/imageUtils'
 
@@ -317,7 +318,17 @@ export const Step1UploadCrop: React.FC<Step1UploadCropProps> = ({
   const bounds = getImageBounds()
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 select-none">
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-3.5 select-none">
+      {/* Tiny Instruction Banner */}
+      <div className="w-full py-1.5 px-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center text-xs text-cyan-200/90 font-medium flex items-center justify-center gap-1.5 shadow-sm">
+        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <span>
+          {!hasUserImage
+            ? 'Upload a picture of the face to fold'
+            : 'Adjust crop or tap Add Line to fold'}
+        </span>
+      </div>
+
       {/* 1. TOP PHOTO CHOOSER BAR (Camera & Upload) */}
       <div className="flex items-center gap-3">
         <input
@@ -680,8 +691,13 @@ export const Step1UploadCrop: React.FC<Step1UploadCropProps> = ({
               </svg>
             </div>
 
+            {/* Instruction text */}
+            <p className="mt-3 text-xs font-semibold text-slate-300 tracking-wide text-center">
+              Upload a picture of the face to fold
+            </p>
+
             {/* Holding Action Buttons */}
-            <div className="mt-4 flex items-center gap-3 w-full max-w-xs justify-center">
+            <div className="mt-3 flex items-center gap-3 w-full max-w-xs justify-center">
               <button
                 type="button"
                 onClick={(e) => {
