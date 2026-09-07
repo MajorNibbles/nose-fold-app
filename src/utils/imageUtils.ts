@@ -105,3 +105,78 @@ export async function fileToOptimizedDataUrl(
   })
 }
 
+/**
+ * Copies a canvas to the system clipboard formatted so messaging apps
+ * like WhatsApp, iMessage, and Telegram treat it as a standard photo attachment
+ * (with caption input and photo preview), rather than a sticker cutout.
+ *
+ * WhatsApp routes images to its custom sticker engine if:
+ *  1. The MIME type is image/png (the default for iOS "Lift Subject" cutout stickers).
+ *  2. The image contains transparency / alpha channel.
+ *
+ * This function:
+ *  1. Flattens the canvas over a solid white background (0 alpha / 100% opaque).
+ *  2. Attempts to write image/jpeg (UTI public.jpeg) which iOS/WhatsApp strictly treats as a photo.
+ *  3. Falls back to opaque image/png if the browser only permits PNG on clipboard writes.
+ */
+export async function copyCanvasAsNormalImage(canvas: HTMLCanvasElement): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard || !navigator.clipboard.write) {
+    return false
+  }
+
+  // 1. Create opaque background (no alpha transparency)
+  const opaqueCanvas = document.createElement('canvas')
+  opaqueCanvas.width = canvas.width
+  opaqueCanvas.height = canvas.height
+  const ctx = opaqueCanvas.getContext('2d')
+  if (!ctx) return false
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height)
+  ctx.drawImage(canvas, 0, 0)
+
+  const toBlobPromise = (mime: string, quality?: number): Promise<Blob | null> =>
+    new Promise((resolve) => opaqueCanvas.toBlob(resolve, mime, quality))
+
+  // 2. Try writing image/jpeg first
+  try {
+    const clipboardItemObj = ClipboardItem as unknown as {
+      supports?: (mime: string) => boolean
+    }
+    const supportsJpeg =
+      typeof clipboardItemObj?.supports === 'function'
+        ? clipboardItemObj.supports('image/jpeg')
+        : true
+
+    if (supportsJpeg) {
+      const jpegBlob = await toBlobPromise('image/jpeg', 0.95)
+      if (jpegBlob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/jpeg': jpegBlob,
+          }),
+        ])
+        return true
+      }
+    }
+  } catch (err) {
+    console.warn('Clipboard write for image/jpeg failed, trying fallback to opaque PNG:', err)
+  }
+
+  // 3. Fallback to opaque image/png
+  try {
+    const pngBlob = await toBlobPromise('image/png')
+    if (pngBlob) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob,
+        }),
+      ])
+      return true
+    }
+  } catch (err) {
+    console.error('Clipboard write for opaque image/png failed:', err)
+  }
+
+  return false
+}

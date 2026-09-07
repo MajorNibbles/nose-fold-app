@@ -29,6 +29,7 @@ import {
   drawFaceFoldWatermark,
 } from '../utils/gifExport'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
+import { copyCanvasAsNormalImage } from '../utils/imageUtils'
 
 interface FoldControlsProps {
   foldProgress: number
@@ -67,6 +68,18 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
   const [isDownloadExpanded, setIsDownloadExpanded] = useState(false)
   const [isBoosted, setIsBoosted] = useState(false)
   const [shareFeedback, setShareFeedback] = useState<string | null>(null)
+  const [canSharePhoto, setCanSharePhoto] = useState(false)
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
+      try {
+        const testFile = new File(['test'], 'test.png', { type: 'image/png' })
+        setCanSharePhoto(navigator.canShare({ files: [testFile] }))
+      } catch {
+        setCanSharePhoto(false)
+      }
+    }
+  }, [])
 
   const isExpanded = isDownloadExpanded || isExportingTransition || isExportingSnap
 
@@ -202,7 +215,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
     }
   }
 
-  // 5. Copy to Clipboard
+  // 5. Copy to Clipboard (Copies as normal photo image for WhatsApp/Messages)
   const handleCopyToClipboard = async () => {
     try {
       const srcCanvas = await getSourceCanvas()
@@ -218,16 +231,67 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
         if (outCtx) {
           drawFaceFoldWatermark(outCtx, 16, 16)
         }
-        canvas.toBlob(async (blob) => {
-          if (!blob) return
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        const copiedOk = await copyCanvasAsNormalImage(canvas)
+        if (copiedOk) {
           setCopied(true)
+          soundManager.playPaperCrease()
           soundManager.vibrate(30)
           setTimeout(() => setCopied(false), 2500)
-        })
+        } else {
+          handleDownloadImage()
+        }
       }
     } catch {
       handleDownloadImage()
+    }
+  }
+
+  // 6. Share Folded Photo directly via Web Share API
+  const handleSharePhoto = async () => {
+    try {
+      const srcCanvas = await getSourceCanvas()
+      const canvas = document.createElement('canvas')
+      const srcCtx = srcCanvas.getContext('2d')
+      if (!srcCtx) return
+
+      renderFoldedCanvas(srcCtx, canvas, foldMap, {
+        foldProgress,
+        showCreaseShadow,
+        trimToFoldHeight,
+      })
+      const outCtx = canvas.getContext('2d')
+      if (outCtx) {
+        drawFaceFoldWatermark(outCtx, 16, 16)
+      }
+
+      const opaqueCanvas = document.createElement('canvas')
+      opaqueCanvas.width = canvas.width
+      opaqueCanvas.height = canvas.height
+      const opaqueCtx = opaqueCanvas.getContext('2d')
+      if (opaqueCtx) {
+        opaqueCtx.fillStyle = '#ffffff'
+        opaqueCtx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height)
+        opaqueCtx.drawImage(canvas, 0, 0)
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        opaqueCanvas.toBlob(resolve, 'image/jpeg', 0.95)
+      )
+      if (!blob) return
+
+      const file = new File([blob], `facefold-${Date.now()}.jpg`, { type: 'image/jpeg' })
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'FaceFold Photo',
+          text: 'Check out my FaceFold photo! Fold your own face here: https://majornibbles.github.io/nose-fold-app/',
+        })
+      } else {
+        await handleCopyToClipboard()
+      }
+    } catch (err) {
+      console.warn('Share photo dismissed or failed:', err)
     }
   }
 
@@ -494,21 +558,37 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
               </button>
             </div>
 
-            {/* Copy to Clipboard Bar */}
-            <button
-              onClick={handleCopyToClipboard}
-              className="w-full py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center justify-between text-xs transition active:scale-98 cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Copy className="w-3.5 h-3.5 text-purple-400" />
-                <span className="text-slate-300">
-                  {copied ? 'Copied to Clipboard!' : 'Copy Photo'}
+            {/* Copy to Clipboard Bar & Quick Share Photo */}
+            <div className="flex items-center gap-2 w-full">
+              <button
+                type="button"
+                onClick={handleCopyToClipboard}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center justify-between text-xs transition active:scale-98 cursor-pointer"
+                title="Copy photo to clipboard (pastes as a normal photo in WhatsApp, not a sticker)"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Copy className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-slate-300 truncate">
+                    {copied ? 'Copied Photo!' : 'Copy Photo'}
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-purple-300 shrink-0 ml-1">
+                  {copied ? '✓ Pastes as Photo' : 'Copy'}
                 </span>
-              </div>
-              <span className="font-mono text-[11px] text-purple-300">
-                {copied ? 'Copied!' : 'Copy'}
-              </span>
-            </button>
+              </button>
+
+              {canSharePhoto && (
+                <button
+                  type="button"
+                  onClick={handleSharePhoto}
+                  className="py-2.5 px-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 text-xs text-slate-300 hover:text-white transition active:scale-98 cursor-pointer shrink-0"
+                  title="Share photo directly to WhatsApp, Messages, or AirDrop"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Share Photo</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

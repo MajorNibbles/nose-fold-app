@@ -20,6 +20,7 @@ import {
 } from '../utils/gifExport'
 import type { ColumnFoldMap } from '../types/fold'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
+import { copyCanvasAsNormalImage } from '../utils/imageUtils'
 import confetti from 'canvas-confetti'
 import { soundManager } from '../utils/soundEffects'
 
@@ -145,7 +146,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   }
 
-  // 5. Copy to Clipboard
+  // 5. Copy to Clipboard (Copies as normal photo image for WhatsApp/Messages)
   const handleCopyToClipboard = async () => {
     try {
       const srcCanvas = await getSourceCanvas()
@@ -161,14 +162,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         if (outCtx) {
           drawFaceFoldWatermark(outCtx, 16, 16)
         }
-        canvas.toBlob(async (blob) => {
-          if (!blob) return
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob }),
-          ])
+        const copiedOk = await copyCanvasAsNormalImage(canvas)
+        if (copiedOk) {
           setCopied(true)
+          soundManager.playPaperCrease()
+          soundManager.vibrate(30)
           setTimeout(() => setCopied(false), 2500)
-        })
+        } else {
+          handleDownloadImage()
+        }
       }
     } catch {
       handleDownloadImage()
@@ -373,6 +375,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <button
             onClick={handleCopyToClipboard}
             className="w-full p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 flex items-center justify-between group transition active:scale-98 cursor-pointer"
+            title="Copy photo to clipboard (pastes as a normal photo in WhatsApp, not a sticker)"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
@@ -380,12 +383,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <div className="text-left">
                 <div className="font-semibold text-white text-xs">
-                  {copied ? 'Copied to Clipboard!' : 'Copy Photo'}
+                  {copied ? 'Copied Photo!' : 'Copy Photo'}
                 </div>
+                <div className="text-[11px] text-slate-400">Pastes as normal photo in WhatsApp</div>
               </div>
             </div>
             <span className="text-xs font-semibold text-purple-300">
-              {copied ? 'Done' : 'Copy'}
+              {copied ? '✓ Photo' : 'Copy'}
             </span>
           </button>
 
