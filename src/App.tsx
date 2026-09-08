@@ -7,6 +7,10 @@ import { FoldControls } from './components/FoldControls'
 import { CameraCaptureModal } from './components/CameraCaptureModal'
 import { PhoneConnectModal } from './components/PhoneConnectModal'
 import { AddToHomePrompt } from './components/AddToHomePrompt'
+import { AdBanner } from './components/AdBanner'
+import { InfoSection } from './components/InfoSection'
+import { Footer } from './components/Footer'
+import { LegalModal, type LegalTab } from './components/LegalModal'
 import type { Stroke, FoldMode } from './types/fold'
 import { computeFoldMap } from './utils/curveUtils'
 import { normalizeImage } from './utils/imageUtils'
@@ -80,6 +84,13 @@ export function App() {
   // Modals
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false)
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false)
+  const [legalTab, setLegalTab] = useState<LegalTab>('privacy')
+
+  const handleOpenLegal = (tab: LegalTab) => {
+    setLegalTab(tab)
+    setIsLegalModalOpen(true)
+  }
 
   // Calculate the column fold map from top and bottom strokes
   const foldMap = useMemo(() => {
@@ -231,10 +242,26 @@ export function App() {
       {/* Add to Homepage Pop up */}
       <AddToHomePrompt />
 
-      {/* Clean minimal footer */}
-      <footer className="w-full max-w-2xl mx-auto text-center mt-4 pt-2 text-slate-600 text-[11px]">
-        FaceFold
-      </footer>
+      {/* Google AdSense Responsive Banner */}
+      <AdBanner />
+
+      {/* SEO, AdSense Compliance, How-It-Works & FAQ Content */}
+      <InfoSection
+        onOpenPrivacy={() => handleOpenLegal('privacy')}
+        onOpenTerms={() => handleOpenLegal('terms')}
+        onOpenAbout={() => handleOpenLegal('about')}
+        onOpenContact={() => handleOpenLegal('contact')}
+      />
+
+      {/* Comprehensive Footer with Legal & Contact links */}
+      <Footer onOpenLegal={handleOpenLegal} />
+
+      {/* Legal / Privacy / Terms / About Dialog Modal */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        initialTab={legalTab}
+        onClose={() => setIsLegalModalOpen(false)}
+      />
     </div>
   )
 }
