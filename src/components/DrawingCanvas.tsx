@@ -36,8 +36,8 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [currentStroke, setCurrentStroke] = useState<Stroke>([])
   const [showLoupe, setShowLoupe] = useState(true)
   const [loupePoint, setLoupePoint] = useState<{
-    screenX: number
-    screenY: number
+    clientX: number
+    clientY: number
     canvasPt: Point
   } | null>(null)
 
@@ -299,35 +299,31 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     e: React.PointerEvent<HTMLCanvasElement>,
     pt: Point
   ) => {
-    const container = containerRef.current
-    if (container) {
-      const cRect = container.getBoundingClientRect()
-      setLoupePoint({
-        screenX: e.clientX - cRect.left,
-        screenY: e.clientY - cRect.top,
-        canvasPt: pt,
-      })
-    }
+    setLoupePoint({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      canvasPt: pt,
+    })
   }
 
   const getLoupePosition = () => {
-    if (!loupePoint || !containerRef.current) {
-      return { x: 0, y: 0, isFlippedBelow: false }
+    if (!loupePoint) {
+      return { x: 0, y: 0 }
     }
 
-    const containerRect = containerRef.current.getBoundingClientRect()
     const LOUPE_SIZE = 120
-    const OFFSET_Y = 85
+    const GAP_ABOVE_FINGER = 26 // Gap between fingertip and bottom of loupe pointer stem
 
-    let posX = loupePoint.screenX - LOUPE_SIZE / 2
-    posX = Math.max(10, Math.min(containerRect.width - LOUPE_SIZE - 10, posX))
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400
+    let posX = loupePoint.clientX - LOUPE_SIZE / 2
+    posX = Math.max(10, Math.min(screenWidth - LOUPE_SIZE - 10, posX))
 
-    const isFlippedBelow = loupePoint.screenY < OFFSET_Y + LOUPE_SIZE / 2 + 15
-    const posY = isFlippedBelow
-      ? loupePoint.screenY + 45
-      : loupePoint.screenY - OFFSET_Y - LOUPE_SIZE / 2
+    // ALWAYS position strictly above the finger!
+    // Target Y sits GAP_ABOVE_FINGER above the touch point clientY
+    const targetY = loupePoint.clientY - GAP_ABOVE_FINGER - LOUPE_SIZE
+    const posY = Math.max(10, targetY)
 
-    return { x: posX, y: posY, isFlippedBelow }
+    return { x: posX, y: posY }
   }
 
   // Pointer position helpers
@@ -613,12 +609,12 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           </div>
         )}
 
-        {/* Precision Magnifying Glass Loupe (Follows finger, floats above) */}
+        {/* Precision Magnifying Glass Loupe (ALWAYS strictly above finger, never blocked by hand) */}
         {showLoupe && isDrawing && loupePoint && (() => {
           const pos = getLoupePosition()
           return (
             <div
-              className="absolute pointer-events-none z-30 select-none will-change-transform"
+              className="fixed pointer-events-none z-50 select-none will-change-transform"
               style={{
                 left: 0,
                 top: 0,
@@ -637,13 +633,9 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                   className="w-[120px] h-[120px] rounded-full block bg-slate-950"
                 />
 
-                {/* Pointer Arrow Stem pointing at the contact point */}
+                {/* Pointer Arrow Stem pointing directly down at the finger contact point */}
                 <div
-                  className={`absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 rotate-45 border-r-2 border-b-2 ${
-                    pos.isFlippedBelow
-                      ? '-top-2 border-t-2 border-l-2 border-r-0 border-b-0'
-                      : '-bottom-2'
-                  } ${
+                  className={`absolute left-1/2 -translate-x-1/2 -bottom-2 w-3.5 h-3.5 rotate-45 border-r-2 border-b-2 ${
                     activeLine === 'top'
                       ? 'bg-slate-950 border-cyan-400'
                       : 'bg-slate-950 border-pink-400'
