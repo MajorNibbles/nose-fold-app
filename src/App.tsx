@@ -15,6 +15,7 @@ import type { Stroke, FoldMode } from './types/fold'
 import { computeFoldMap } from './utils/curveUtils'
 import { normalizeImage } from './utils/imageUtils'
 import { soundManager } from './utils/soundEffects'
+import { trackEvent } from './utils/analytics'
 
 const SESSION_STORAGE_KEY = 'nosefold_app_state_v1'
 
@@ -106,6 +107,7 @@ export function App() {
     } catch {
       setImageSrc(dataUrl)
     }
+    trackEvent('upload_photo', { method: 'file' })
   }
 
   const handleCameraCapture = async (dataUrl: string) => {
@@ -117,6 +119,7 @@ export function App() {
     } catch {
       setImageSrc(dataUrl)
     }
+    trackEvent('upload_photo', { method: 'camera' })
   }
 
   // Sync steps with browser history for Android swipe-back gesture & system back button
@@ -171,6 +174,7 @@ export function App() {
       setImageSrc(croppedDataUrl)
     }
     soundManager.playPaperCrease()
+    trackEvent('crop_complete')
     changeStep(2)
   }
 
@@ -178,6 +182,7 @@ export function App() {
   const handleStep2Complete = () => {
     soundManager.playFoldSound(true)
     setFoldProgress(1.0)
+    trackEvent('fold_created')
     changeStep(3)
   }
 

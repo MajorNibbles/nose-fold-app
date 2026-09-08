@@ -3,6 +3,7 @@ import { FaceFoldLogo } from './FaceFoldLogo'
 import { Share2 } from 'lucide-react'
 import { shareFaceFoldApp } from '../utils/shareUtils'
 import { soundManager } from '../utils/soundEffects'
+import { trackEvent } from '../utils/analytics'
 
 export type AppStep = 1 | 2 | 3
 
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({ onRestart }) => {
 
   const handleShare = async () => {
     soundManager.playPaperCrease()
+    trackEvent('share_facefold_clicked')
     const res = await shareFaceFoldApp()
     if (res.success && res.method !== 'native') {
       setToast('Link copied!')
