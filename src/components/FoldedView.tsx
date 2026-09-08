@@ -165,7 +165,7 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
         className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center cursor-pointer group mx-auto"
         style={{
           aspectRatio,
-          maxHeight: 'min(46dvh, 500px)',
+          maxHeight: 'min(53dvh, 530px)',
           touchAction: 'none',
           overscrollBehavior: 'none',
         }}

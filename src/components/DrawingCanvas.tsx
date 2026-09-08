@@ -526,7 +526,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none mx-auto"
         style={{
           aspectRatio: image && image.naturalWidth && image.naturalHeight ? `${image.naturalWidth} / ${image.naturalHeight}` : '4 / 5',
-          maxHeight: 'min(48dvh, 480px)',
+          maxHeight: 'min(53dvh, 530px)',
           touchAction: 'none',
           overscrollBehavior: 'none',
         }}
@@ -606,17 +606,9 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         {!isDrawing && scale <= 1.05 && (
           <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/90 border border-slate-700/80 rounded-full px-3.5 py-1 text-slate-200 text-xs shadow-lg backdrop-blur-md flex items-center gap-2 whitespace-nowrap animate-fadeIn max-w-[92%] justify-center text-center">
             {activeLine === 'top' ? (
-              <>
-                <span className="text-cyan-300 font-semibold truncate">👁️ Draw line below eyes</span>
-                <span className="text-slate-500 shrink-0">•</span>
-                <span className="text-slate-400 text-[11px] shrink-0">🤏 Pinch to zoom</span>
-              </>
+              <span className="text-cyan-300 font-semibold truncate">👁️ Draw line below eyes</span>
             ) : (
-              <>
-                <span className="text-pink-300 font-semibold truncate">👄 Draw line above mouth</span>
-                <span className="text-slate-500 shrink-0">•</span>
-                <span className="text-slate-400 text-[11px] shrink-0">🤏 Pinch to zoom</span>
-              </>
+              <span className="text-pink-300 font-semibold truncate">👄 Draw line above mouth</span>
             )}
           </div>
         )}
