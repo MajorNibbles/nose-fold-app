@@ -515,71 +515,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   return (
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto px-2 sm:px-0">
-      {/* Streamlined Step Instruction & Placement Banner */}
-      <div className="w-full mb-2 sm:mb-3 px-3 py-2 bg-slate-900/95 border border-slate-800 rounded-2xl flex flex-col gap-1.5 shadow-lg select-none">
-        {/* Top Row: Line Status & Switcher Buttons */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm shadow-md shrink-0 ${
-                activeLine === 'top'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
-              }`}
-            >
-              {activeLine === 'top' ? '👁️' : '👄'}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-slate-100 truncate">
-                {activeLine === 'top' ? 'Step 1: Eye Line' : 'Step 2: Mouth Line'}
-              </span>
-              <span className="text-[10px] text-amber-300/90 leading-tight truncate">
-                {activeLine === 'top'
-                  ? 'Draw line right below eyes'
-                  : 'Draw line right above mouth'}
-              </span>
-            </div>
-          </div>
-
-          {/* Line Selector Toggle */}
-          <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveLine('top')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activeLine === 'top'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Eyes {topStroke.length > 1 ? '✓' : ''}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveLine('bottom')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activeLine === 'bottom'
-                  ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Mouth {bottomStroke.length > 1 ? '✓' : ''}
-            </button>
-          </div>
-        </div>
-
-        {/* Bottom Row: Subtle Pinch & Tip bar */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-1 px-0.5">
-          <div className="flex items-center gap-1 text-[10px] text-slate-300">
-            <span>🤏</span>
-            <span>Pinch with 2 fingers to zoom & pan</span>
-          </div>
-          <span className="text-[10px] text-slate-500 hidden sm:inline">
-            Draw left-to-right across face
-          </span>
-        </div>
-      </div>
-
       {/* Main Canvas Viewport - Responsively sized to image aspect ratio with dynamic height ceiling */}
       <div
         ref={containerRef}
@@ -591,7 +526,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none mx-auto"
         style={{
           aspectRatio: image && image.naturalWidth && image.naturalHeight ? `${image.naturalWidth} / ${image.naturalHeight}` : '4 / 5',
-          maxHeight: 'min(46dvh, 500px)',
+          maxHeight: 'min(48dvh, 480px)',
           touchAction: 'none',
           overscrollBehavior: 'none',
         }}
@@ -617,9 +552,43 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           <div className="text-slate-500 text-sm animate-pulse">Loading photo...</div>
         )}
 
+        {/* Floating Line Selector Switcher inside Canvas */}
+        <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 z-20 flex items-center gap-1 bg-slate-900/85 backdrop-blur-md p-1 rounded-2xl border border-slate-700/80 shadow-xl">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setActiveLine('top')
+            }}
+            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              activeLine === 'top'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <span>👁️ Eye</span>
+            {topStroke.length > 1 && <span className="text-[10px]">✓</span>}
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setActiveLine('bottom')
+            }}
+            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              activeLine === 'bottom'
+                ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <span>👄 Mouth</span>
+            {bottomStroke.length > 1 && <span className="text-[10px]">✓</span>}
+          </button>
+        </div>
+
         {/* Floating Zoom Indicator & Quick Reset (When Zoomed In) */}
         {scale > 1.05 && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-full py-1 px-2.5 shadow-xl backdrop-blur-md animate-fadeIn">
+          <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-full py-1 px-2.5 shadow-xl backdrop-blur-md animate-fadeIn">
             <span className="text-cyan-400 text-xs font-mono font-bold">
               {Math.round(scale * 100)}%
             </span>
@@ -633,12 +602,22 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           </div>
         )}
 
-        {/* Floating Initial Draw & Zoom Tip (Disappears once drawing starts) */}
-        {topStroke.length === 0 && !isDrawing && scale <= 1.05 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/90 border border-slate-700/80 rounded-full px-3.5 py-1 text-slate-300 text-xs shadow-lg backdrop-blur-md flex items-center gap-2 whitespace-nowrap animate-fadeIn">
-            <span>✏️ Draw across face</span>
-            <span className="text-slate-500">•</span>
-            <span>🤏 Pinch to zoom</span>
+        {/* Floating Contextual Tip on Photo (Hides during drawing so photo is never blocked) */}
+        {!isDrawing && scale <= 1.05 && (
+          <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/90 border border-slate-700/80 rounded-full px-3.5 py-1 text-slate-200 text-xs shadow-lg backdrop-blur-md flex items-center gap-2 whitespace-nowrap animate-fadeIn max-w-[92%] justify-center text-center">
+            {activeLine === 'top' ? (
+              <>
+                <span className="text-cyan-300 font-semibold truncate">👁️ Draw line below eyes</span>
+                <span className="text-slate-500 shrink-0">•</span>
+                <span className="text-slate-400 text-[11px] shrink-0">🤏 Pinch to zoom</span>
+              </>
+            ) : (
+              <>
+                <span className="text-pink-300 font-semibold truncate">👄 Draw line above mouth</span>
+                <span className="text-slate-500 shrink-0">•</span>
+                <span className="text-slate-400 text-[11px] shrink-0">🤏 Pinch to zoom</span>
+              </>
+            )}
           </div>
         )}
 
@@ -685,13 +664,13 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       </div>
 
       {/* Secondary Tools below canvas (Back, Redraw, Clear, Zoom Controls) */}
-      <div className="w-full mt-3 flex items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-2">
+      <div className="w-full mt-2 flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Back to Step 1 */}
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold border border-slate-700 transition active:scale-95 cursor-pointer"
             title="Back to photo"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -702,7 +681,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           <button
             type="button"
             onClick={handleClearCurrent}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/70 hover:bg-slate-750 text-slate-300 text-xs font-medium border border-slate-700/80 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-800/70 hover:bg-slate-750 text-slate-300 text-xs font-medium border border-slate-700/80 transition cursor-pointer"
             title="Redraw current line"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -713,7 +692,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           <button
             type="button"
             onClick={handleClearAll}
-            className="px-2.5 py-2 text-slate-400 hover:text-rose-400 text-xs font-medium transition cursor-pointer"
+            className="px-2 py-1.5 text-slate-400 hover:text-rose-400 text-xs font-medium transition cursor-pointer"
           >
             Clear
           </button>
@@ -727,7 +706,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
               type="button"
               onClick={handleZoomOut}
               disabled={scale <= 1.0}
-              className="px-2 py-1.5 text-slate-300 hover:text-white disabled:opacity-35 transition cursor-pointer text-xs font-bold"
+              className="px-2 py-1 text-slate-300 hover:text-white disabled:opacity-35 transition cursor-pointer text-xs font-bold"
               title="Zoom out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
@@ -735,7 +714,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             <button
               type="button"
               onClick={handleResetZoom}
-              className="px-2 py-1 text-[11px] font-mono text-cyan-300 hover:text-cyan-200 transition cursor-pointer"
+              className="px-1.5 py-1 text-[11px] font-mono text-cyan-300 hover:text-cyan-200 transition cursor-pointer"
               title="Reset zoom (100% fit)"
             >
               {Math.round(scale * 100)}%
@@ -744,7 +723,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
               type="button"
               onClick={handleZoomIn}
               disabled={scale >= 3.5}
-              className="px-2 py-1.5 text-slate-300 hover:text-white disabled:opacity-35 transition cursor-pointer text-xs font-bold"
+              className="px-2 py-1 text-slate-300 hover:text-white disabled:opacity-35 transition cursor-pointer text-xs font-bold"
               title="Zoom in"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -755,7 +734,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           <button
             type="button"
             onClick={() => setShowLoupe(!showLoupe)}
-            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-medium border transition cursor-pointer ${
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-medium border transition cursor-pointer ${
               showLoupe
                 ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
                 : 'bg-slate-800/60 border-slate-700 text-slate-500'
@@ -767,19 +746,19 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         </div>
       </div>
 
-      {/* Primary Action: Full-Width Fold Button (Identical styling to Add Line button) */}
+      {/* Primary Action: Full-Width Fold Button */}
       <button
         type="button"
         disabled={!bothLinesDrawn}
         onClick={onFoldReady}
-        className={`w-full mt-3 py-3.5 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition select-none ${
+        className={`w-full mt-2 py-2.5 sm:py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition select-none ${
           bothLinesDrawn
             ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/20 transform active:scale-98 cursor-pointer'
             : 'bg-slate-800/60 text-slate-500 border border-slate-700/50 cursor-not-allowed opacity-50 shadow-none'
         }`}
       >
         <span>Fold</span>
-        <ArrowRight className="w-5 h-5" />
+        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
     </div>
   )
