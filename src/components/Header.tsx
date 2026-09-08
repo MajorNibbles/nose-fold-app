@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { FaceFoldLogo } from './FaceFoldLogo'
-import { Share2 } from 'lucide-react'
+import { Share2, Download } from 'lucide-react'
 import { shareFaceFoldApp } from '../utils/shareUtils'
 import { soundManager } from '../utils/soundEffects'
 import { trackEvent } from '../utils/analytics'
@@ -14,9 +14,15 @@ interface HeaderProps {
   onRestart: () => void
   canGoToStep2?: boolean
   canGoToStep3?: boolean
+  canInstall?: boolean
+  onTriggerInstall?: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ onRestart }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onRestart,
+  canInstall = false,
+  onTriggerInstall,
+}) => {
   const [toast, setToast] = useState<string | null>(null)
 
   const handleShare = async () => {
@@ -36,8 +42,24 @@ export const Header: React.FC<HeaderProps> = ({ onRestart }) => {
         <FaceFoldLogo onClick={onRestart} animated={true} />
       </div>
 
-      {/* Top Right "Share FaceFold" Button with Little Logo Badge */}
-      <div className="relative flex items-center">
+      {/* Top Right Buttons: Install App & Share FaceFold */}
+      <div className="relative flex items-center gap-1.5 sm:gap-2">
+        {/* Install / Add to Home Button (Hidden if already running as installed standalone app) */}
+        {canInstall && onTriggerInstall && (
+          <button
+            type="button"
+            onClick={onTriggerInstall}
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/35 text-[11px] sm:text-xs font-bold transition transform active:scale-95 cursor-pointer shadow-sm group"
+            title="Install FaceFold on your device"
+          >
+            <div className="w-5 h-5 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 border border-cyan-400/30 group-hover:scale-110 transition-transform">
+              <Download className="w-3 h-3 text-cyan-400" />
+            </div>
+            <span className="font-bold tracking-tight">Install</span>
+          </button>
+        )}
+
+        {/* Top Right "Share FaceFold" Button with Little Logo Badge */}
         <button
           type="button"
           onClick={handleShare}

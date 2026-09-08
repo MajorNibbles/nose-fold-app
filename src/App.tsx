@@ -16,6 +16,7 @@ import { computeFoldMap } from './utils/curveUtils'
 import { normalizeImage } from './utils/imageUtils'
 import { soundManager } from './utils/soundEffects'
 import { trackEvent } from './utils/analytics'
+import { usePwaInstall } from './hooks/usePwaInstall'
 
 const SESSION_STORAGE_KEY = 'nosefold_app_state_v1'
 
@@ -41,6 +42,7 @@ function loadSavedState(): SavedState | null {
 }
 
 export function App() {
+  const pwa = usePwaInstall()
   const [saved] = useState(() => loadSavedState())
 
   // Current active step: 1 = Photo & Crop, 2 = Draw Lines, 3 = Reveal & Download
@@ -220,6 +222,8 @@ export function App() {
         onRestart={handleRestart}
         canGoToStep2={canGoToStep2}
         canGoToStep3={canGoToStep3}
+        canInstall={!pwa.isStandalone}
+        onTriggerInstall={pwa.triggerInstall}
       />
 
       {/* Main Content Area: Step 1, 2, or 3 */}
@@ -287,7 +291,13 @@ export function App() {
       />
 
       {/* Add to Homepage Pop up */}
-      <AddToHomePrompt />
+      <AddToHomePrompt
+        showPrompt={pwa.showPrompt}
+        platform={pwa.platform}
+        deferredPrompt={pwa.deferredPrompt}
+        onInstall={pwa.triggerInstall}
+        onDismiss={pwa.dismissPrompt}
+      />
 
       {/* Google AdSense Responsive Banner */}
       <AdBanner adClient="ca-pub-8578537568978893" />

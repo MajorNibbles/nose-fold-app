@@ -1,77 +1,29 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { PlusCircle, Share, X, Smartphone } from 'lucide-react'
 
-export const AddToHomePrompt: React.FC = () => {
-  const [showPrompt, setShowPrompt] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [platform, setPlatform] = useState<'ios' | 'android' | 'other'>('other')
+interface AddToHomePromptProps {
+  showPrompt: boolean
+  platform: 'ios' | 'android' | 'other'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deferredPrompt: any
+  onInstall: () => void
+  onDismiss: () => void
+}
 
-  useEffect(() => {
-    // 1. Check if already installed / running in standalone mode
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://')
-
-    if (isStandalone) return
-
-    // 2. Check if user dismissed it this session
-    const isDismissed = sessionStorage.getItem('pwa-prompt-dismissed') === 'true'
-    if (isDismissed) return
-
-    // 3. Detect platform
-    const ua = window.navigator.userAgent.toLowerCase()
-    const isIos = /iphone|ipad|ipod/.test(ua)
-    const isAndroid = /android/.test(ua)
-
-    if (isIos) {
-      setPlatform('ios')
-    } else if (isAndroid) {
-      setPlatform('android')
-    } else {
-      setPlatform('other')
-    }
-
-    // 4. Capture beforeinstallprompt for Android Chrome / Chromium
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setShowPrompt(true)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-
-    // Show prompt after a short pleasant delay (1.8s)
-    const timer = setTimeout(() => {
-      setShowPrompt(true)
-    }, 1800)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      clearTimeout(timer)
-    }
-  }, [])
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      if (outcome === 'accepted') {
-        setShowPrompt(false)
-      }
-      setDeferredPrompt(null)
-    }
-  }
-
-  const handleDismiss = () => {
-    setShowPrompt(false)
-    sessionStorage.setItem('pwa-prompt-dismissed', 'true')
-  }
-
+export const AddToHomePrompt: React.FC<AddToHomePromptProps> = ({
+  showPrompt,
+  platform,
+  deferredPrompt,
+  onInstall,
+  onDismiss,
+}) => {
   if (!showPrompt) return null
 
   return (
-    <aside aria-label="Add to Homepage prompt" className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
+    <aside
+      aria-label="Add to Homepage prompt"
+      className="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-50 animate-in fade-in slide-in-from-bottom-5 duration-300"
+    >
       <div className="bg-slate-900/95 backdrop-blur-xl border border-cyan-500/40 rounded-2xl p-3.5 shadow-2xl shadow-cyan-950/40 flex items-center justify-between gap-3 select-none">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -101,16 +53,16 @@ export const AddToHomePrompt: React.FC = () => {
         <div className="flex items-center gap-1.5 shrink-0">
           {deferredPrompt && (
             <button
-              onClick={handleInstallClick}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow transition active:scale-95"
+              onClick={onInstall}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow transition active:scale-95 cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Install</span>
             </button>
           )}
           <button
-            onClick={handleDismiss}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            onClick={onDismiss}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
