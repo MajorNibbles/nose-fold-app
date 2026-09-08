@@ -45,9 +45,13 @@ export const AdBanner: React.FC<AdBannerProps> = ({
     }
   }, [isConfigured])
 
+  if (!isConfigured) {
+    return null
+  }
+
   return (
     <div
-      className={`w-full max-w-2xl mx-auto my-3 p-3 rounded-2xl bg-slate-900/60 border border-dashed border-slate-800/80 flex flex-col items-center justify-center overflow-hidden text-center transition select-none ${className}`}
+      className={`w-full max-w-2xl mx-auto my-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex flex-col items-center justify-center overflow-hidden text-center transition select-none ${className}`}
       aria-label="Advertisement Banner"
     >
       {/* Subtle Ad Label compliant with Google AdSense Guidelines */}
@@ -55,28 +59,15 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         Advertisement
       </span>
 
-      {isConfigured ? (
-        <ins
-          ref={adRef}
-          className="adsbygoogle block w-full text-center"
-          style={{ display: 'block', minHeight: '90px' }}
-          data-ad-client={adClient}
-          data-ad-slot={adSlot}
-          data-ad-format={adFormat}
-          data-full-width-responsive={fullWidthResponsive ? 'true' : 'false'}
-        />
-      ) : (
-        /* Sleek Placeholder during development / AdSense review */
-        <div className="w-full py-4 px-3 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-slate-950/40 border border-slate-850">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
-            <span>Google AdSense Banner Placement</span>
-          </div>
-          <p className="text-[11px] text-slate-400 max-w-sm">
-            Responsive leaderboard & mobile banner slot (ready for your publisher ID).
-          </p>
-        </div>
-      )}
+      <ins
+        ref={adRef}
+        className="adsbygoogle block w-full text-center"
+        style={{ display: 'block', minHeight: '90px' }}
+        data-ad-client={adClient}
+        data-ad-slot={adSlot}
+        data-ad-format={adFormat}
+        data-full-width-responsive={fullWidthResponsive ? 'true' : 'false'}
+      />
     </div>
   )
 }
