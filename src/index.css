@@ -6,7 +6,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   
-  html, body {
+  html, body, #root {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -17,11 +17,19 @@
     user-select: none;
     -webkit-user-select: none;
     overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
   }
 
   /* Prevent mobile browser pull-to-refresh and bounce during touch drawing */
   .touch-none-all {
     touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  /* iOS safe area utility */
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
   }
 }
 

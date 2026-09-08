@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react'
 import type { Point, Stroke, FoldMode } from '../types/fold'
 import { strokeToColumnY } from '../utils/curveUtils'
 import { soundManager } from '../utils/soundEffects'
-import { RotateCcw, ArrowRight, ZoomIn, ZoomOut, ArrowLeft, Sparkles } from 'lucide-react'
+import { RotateCcw, ArrowRight, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react'
 
 interface DrawingCanvasProps {
   imageSrc: string
@@ -514,93 +514,73 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const bothLinesDrawn = topStroke.length > 1 && bottomStroke.length > 1
 
   return (
-    <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
-      {/* Step Instruction Banner */}
-      <div className="w-full mb-3 px-3.5 py-2 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm shadow-md ${
-              activeLine === 'top'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
-            }`}
-          >
-            {activeLine === 'top' ? '👁️' : '👄'}
-          </div>
-          <span className="text-xs font-bold text-slate-200">
-            {activeLine === 'top' ? 'Eye Line' : 'Mouth Line'}
-          </span>
-        </div>
-
-        {/* Line Selector Buttons */}
-        <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
-          <button
-            type="button"
-            onClick={() => setActiveLine('top')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-              activeLine === 'top'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Eye Line {topStroke.length > 1 ? '✓' : ''}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLine('bottom')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-              activeLine === 'bottom'
-                ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Mouth Line {bottomStroke.length > 1 ? '✓' : ''}
-          </button>
-        </div>
-      </div>
-
-      {/* Step Drawing & Pinch-to-Zoom Tooltip Banner */}
-      <div className="w-full mb-3 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-cyan-500/15 border border-amber-500/30 shadow-lg flex flex-col gap-1.5 select-none">
-        {/* Primary Line Placement Tip */}
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-amber-200">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              <strong className="text-amber-300 font-bold">
-                {activeLine === 'top' ? 'Eye Line Tip:' : 'Mouth Line Tip:'}
-              </strong>{' '}
-              {activeLine === 'top'
-                ? 'Get the line as close to the bottom of the eyes as possible'
-                : 'Get the line as close to the top of the mouth as possible'}
-            </span>
+    <div className="flex flex-col items-center w-full max-w-2xl mx-auto px-2 sm:px-0">
+      {/* Streamlined Step Instruction & Placement Banner */}
+      <div className="w-full mb-2 sm:mb-3 px-3 py-2 bg-slate-900/95 border border-slate-800 rounded-2xl flex flex-col gap-1.5 shadow-lg select-none">
+        {/* Top Row: Line Status & Switcher Buttons */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm shadow-md shrink-0 ${
+                activeLine === 'top'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+              }`}
+            >
+              {activeLine === 'top' ? '👁️' : '👄'}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-slate-100 truncate">
+                {activeLine === 'top' ? 'Step 1: Eye Line' : 'Step 2: Mouth Line'}
+              </span>
+              <span className="text-[10px] text-amber-300/90 leading-tight truncate">
+                {activeLine === 'top'
+                  ? 'Draw line right below eyes'
+                  : 'Draw line right above mouth'}
+              </span>
+            </div>
           </div>
 
-          <span
-            className={`hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full font-mono shrink-0 ${
-              activeLine === 'top'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
-            }`}
-          >
-            {activeLine === 'top' ? 'Step 1 of 2' : 'Step 2 of 2'}
-          </span>
+          {/* Line Selector Toggle */}
+          <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveLine('top')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeLine === 'top'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Eyes {topStroke.length > 1 ? '✓' : ''}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveLine('bottom')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeLine === 'bottom'
+                  ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Mouth {bottomStroke.length > 1 ? '✓' : ''}
+            </button>
+          </div>
         </div>
 
-        {/* Pinch to Zoom Tip */}
-        <div className="flex items-center justify-between text-[11px] text-slate-300 border-t border-slate-800/80 pt-1.5 px-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">🤏</span>
-            <span>
-              <strong className="text-slate-200">Pinch with 2 fingers</strong> to zoom in & pan for extra precision
-            </span>
+        {/* Bottom Row: Subtle Pinch & Tip bar */}
+        <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-1 px-0.5">
+          <div className="flex items-center gap-1 text-[10px] text-slate-300">
+            <span>🤏</span>
+            <span>Pinch with 2 fingers to zoom & pan</span>
           </div>
-          <span className="text-slate-400 text-[10px] hidden sm:inline">
+          <span className="text-[10px] text-slate-500 hidden sm:inline">
             Draw left-to-right across face
           </span>
         </div>
       </div>
 
-      {/* Main Canvas Viewport */}
+      {/* Main Canvas Viewport - Responsively sized to image aspect ratio with dynamic height ceiling */}
       <div
         ref={containerRef}
         onTouchStart={handleTouchStart}
@@ -608,7 +588,13 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onWheel={handleWheel}
-        className="relative w-full aspect-[4/5] sm:aspect-square max-h-[580px] bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none"
+        className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none mx-auto"
+        style={{
+          aspectRatio: image && image.naturalWidth && image.naturalHeight ? `${image.naturalWidth} / ${image.naturalHeight}` : '4 / 5',
+          maxHeight: 'min(46dvh, 500px)',
+          touchAction: 'none',
+          overscrollBehavior: 'none',
+        }}
       >
         {image ? (
           <canvas

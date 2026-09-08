@@ -119,6 +119,48 @@ export function App() {
     }
   }
 
+  // Sync steps with browser history for Android swipe-back gesture & system back button
+  useEffect(() => {
+    if (!window.history.state || window.history.state.step === undefined) {
+      window.history.replaceState({ step: currentStep }, '')
+    }
+  }, [])
+
+  const changeStep = useCallback((newStep: AppStep, pushHistory = true) => {
+    setCurrentStep(newStep)
+    if (pushHistory) {
+      window.history.pushState({ step: newStep }, '')
+    }
+  }, [])
+
+  // Listen for browser popstate (triggered by Android swipe-left / back gestures)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const targetStep = event.state?.step
+      if (typeof targetStep === 'number' && (targetStep === 1 || targetStep === 2 || targetStep === 3)) {
+        setCurrentStep(targetStep as AppStep)
+      } else {
+        // Fallback: stay inside the app rather than exiting to external sites
+        setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as AppStep) : 1))
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  // Guard against accidental page close if lines are drawn
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (topStroke.length > 0 || bottomStroke.length > 0) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [topStroke.length, bottomStroke.length])
+
   // Complete Step 1 and proceed to Step 2
   const handleStep1Complete = async (croppedDataUrl: string) => {
     try {
@@ -129,14 +171,14 @@ export function App() {
       setImageSrc(croppedDataUrl)
     }
     soundManager.playPaperCrease()
-    setCurrentStep(2)
+    changeStep(2)
   }
 
   // Complete Step 2 and proceed to Step 3
   const handleStep2Complete = () => {
     soundManager.playFoldSound(true)
     setFoldProgress(1.0)
-    setCurrentStep(3)
+    changeStep(3)
   }
 
   // Toggle Before / After in Step 3
@@ -157,18 +199,18 @@ export function App() {
     setTopStroke([])
     setBottomStroke([])
     setDimensions({ width: 500, height: 650 })
-    setCurrentStep(1)
+    changeStep(1)
   }
 
   const canGoToStep2 = Boolean(imageSrc && imageSrc.length > 0)
   const canGoToStep3 = topStroke.length > 1 && bottomStroke.length > 1
 
   return (
-    <div className="min-h-screen w-full bg-[#0b0e14] text-slate-100 flex flex-col p-3 sm:p-5 antialiased selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen w-full bg-[#0b0e14] text-slate-100 flex flex-col p-3 sm:p-5 antialiased selection:bg-pink-500 selection:text-white safe-area-bottom">
       {/* Header with FaceFold Logo */}
       <Header
         currentStep={currentStep}
-        onStepChange={(step) => setCurrentStep(step)}
+        onStepChange={(step) => changeStep(step)}
         onOpenPhoneModal={() => setIsPhoneModalOpen(true)}
         onRestart={handleRestart}
         canGoToStep2={canGoToStep2}
@@ -196,7 +238,7 @@ export function App() {
             onTopStrokeChange={setTopStroke}
             onBottomStrokeChange={setBottomStroke}
             onFoldReady={handleStep2Complete}
-            onBack={() => setCurrentStep(1)}
+            onBack={() => changeStep(1)}
           />
         )}
 
@@ -214,8 +256,8 @@ export function App() {
             <FoldControls
               foldProgress={foldProgress}
               onFoldProgressChange={setFoldProgress}
-              onAdjustLines={() => setCurrentStep(2)}
-              onNewPhoto={() => setCurrentStep(1)}
+              onAdjustLines={() => changeStep(2)}
+              onNewPhoto={() => changeStep(1)}
               imageSrc={imageSrc}
               foldMap={foldMap}
               showCreaseShadow={showCreaseShadow}

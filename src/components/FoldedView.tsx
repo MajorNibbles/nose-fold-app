@@ -42,6 +42,7 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
   const [isLoaded, setIsLoaded] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
+  const [aspectRatio, setAspectRatio] = useState<string>('4 / 5')
 
   // Cache source image on an offscreen canvas
   useEffect(() => {
@@ -52,6 +53,9 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
       const srcCanvas = document.createElement('canvas')
       srcCanvas.width = img.naturalWidth || 600
       srcCanvas.height = img.naturalHeight || 600
+      if (img.naturalWidth && img.naturalHeight) {
+        setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`)
+      }
       const ctx = srcCanvas.getContext('2d')
       if (ctx) {
         ctx.drawImage(img, 0, 0, srcCanvas.width, srcCanvas.height)
@@ -154,11 +158,17 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-2xl mx-auto select-none">
-      {/* Visual Canvas Container */}
+    <div className="flex flex-col items-center w-full max-w-2xl mx-auto select-none px-2 sm:px-0">
+      {/* Visual Canvas Container - Responsively sized to image aspect ratio with dynamic height ceiling */}
       <div
         onClick={handleCanvasClick}
-        className="relative w-full aspect-[4/5] sm:aspect-square max-h-[580px] bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center cursor-pointer group"
+        className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center cursor-pointer group mx-auto"
+        style={{
+          aspectRatio,
+          maxHeight: 'min(46dvh, 500px)',
+          touchAction: 'none',
+          overscrollBehavior: 'none',
+        }}
       >
         <canvas
           ref={canvasRef}
