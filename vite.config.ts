@@ -21,19 +21,18 @@ function preventMobileCameraDisconnectReload() {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const useHttps = process.env.HTTPS === 'true' || mode === 'https'
-  return {
-    base: './',
-    server: {
-      host: true, // Listen on all network addresses (0.0.0.0)
-      port: 5173,
-    },
-    plugins: [
-      preventMobileCameraDisconnectReload(),
-      react(),
-      tailwindcss(),
-      useHttps ? basicSsl() : undefined,
-    ].filter(Boolean),
-  }
+const isHttps = process.env.HTTPS === 'true' || process.env.npm_lifecycle_event === 'dev:https'
+
+export default defineConfig({
+  base: './',
+  server: {
+    host: true, // Listen on all network addresses (0.0.0.0)
+    port: 5173,
+  },
+  plugins: [
+    preventMobileCameraDisconnectReload(),
+    react(),
+    tailwindcss(),
+    isHttps ? basicSsl() : undefined,
+  ].filter(Boolean),
 })
