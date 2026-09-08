@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import type { Point, Stroke, FoldMode } from '../types/fold'
-import { strokeToColumnY } from '../utils/curveUtils'
+import { computeFoldMap } from '../utils/curveUtils'
 import { soundManager } from '../utils/soundEffects'
 import { RotateCcw, ArrowRight, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react'
 
@@ -21,7 +21,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   topStroke,
   bottomStroke,
   foldMode,
-  onFoldModeChange: _onFoldModeChange,
+  onFoldModeChange,
   onTopStrokeChange,
   onBottomStrokeChange,
   onFoldReady,
@@ -93,35 +93,45 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const effectiveBottom = activeLine === 'bottom' && currentStroke.length > 1 ? currentStroke : bottomStroke
 
     if (hasTop && hasBottom) {
-      const colTop = strokeToColumnY(effectiveTop, width, foldMode)
-      const colBottom = strokeToColumnY(effectiveBottom, width, foldMode)
+      const foldData = computeFoldMap(effectiveTop, effectiveBottom, width, foldMode)
+      const isCrease = foldMode === 'crease' || foldMode === 'full-paper'
 
-      ctx.save()
-      // Draw highlighted fill between top and bottom lines
-      ctx.beginPath()
-      // Top line left-to-right
-      for (let x = 0; x < width; x++) {
-        const yt = Math.min(colTop.yValues[x], colBottom.yValues[x])
-        if (x === 0) ctx.moveTo(x, yt)
-        else ctx.lineTo(x, yt)
+      let startX = 0
+      let endX = width - 1
+
+      if (!isCrease) {
+        while (startX < width && foldData.gap[startX] === 0) startX++
+        while (endX >= 0 && foldData.gap[endX] === 0) endX--
       }
-      // Bottom line right-to-left
-      for (let x = width - 1; x >= 0; x--) {
-        const yb = Math.max(colTop.yValues[x], colBottom.yValues[x])
-        ctx.lineTo(x, yb)
+
+      if (startX <= endX) {
+        ctx.save()
+        // Draw highlighted fill between top and bottom lines
+        ctx.beginPath()
+        // Top line left-to-right
+        for (let x = startX; x <= endX; x++) {
+          const yt = foldData.yTop[x]
+          if (x === startX) ctx.moveTo(x, yt)
+          else ctx.lineTo(x, yt)
+        }
+        // Bottom line right-to-left
+        for (let x = endX; x >= startX; x--) {
+          const yb = foldData.yBottom[x]
+          ctx.lineTo(x, yb)
+        }
+        ctx.closePath()
+
+        // Translucent fill
+        ctx.fillStyle = 'rgba(236, 72, 153, 0.28)'
+        ctx.fill()
+
+        // Subtle fold border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+        ctx.lineWidth = 1.5
+        ctx.setLineDash([4, 4])
+        ctx.stroke()
+        ctx.restore()
       }
-      ctx.closePath()
-
-      // Striped / translucent fill
-      ctx.fillStyle = 'rgba(236, 72, 153, 0.28)'
-      ctx.fill()
-
-      // Subtle fold border
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([4, 4])
-      ctx.stroke()
-      ctx.restore()
     }
 
     // Helper to draw a single squiggly line
@@ -582,21 +592,59 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           </button>
         </div>
 
-        {/* Floating Zoom Indicator & Quick Reset (When Zoomed In) */}
-        {scale > 1.05 && (
-          <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-full py-1 px-2.5 shadow-xl backdrop-blur-md animate-fadeIn">
-            <span className="text-cyan-400 text-xs font-mono font-bold">
-              {Math.round(scale * 100)}%
-            </span>
+        {/* Floating Controls Top-Right: Zoom Indicator + Pinch / Crease Switcher */}
+        <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 z-20 flex items-center gap-1.5">
+          {scale > 1.05 && (
+            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl py-1 px-2.5 shadow-xl backdrop-blur-md animate-fadeIn">
+              <span className="text-cyan-400 text-xs font-mono font-bold">
+                {Math.round(scale * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 px-2 py-0.5 rounded-full transition cursor-pointer"
+              >
+                Fit
+              </button>
+            </div>
+          )}
+
+          {/* Mode Switcher: Pinch vs Crease */}
+          <div className="flex items-center gap-1 bg-slate-900/85 backdrop-blur-md p-1 rounded-2xl border border-slate-700/80 shadow-xl">
             <button
               type="button"
-              onClick={handleResetZoom}
-              className="text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 px-2 py-0.5 rounded-full transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onFoldModeChange('pinch')
+                soundManager.vibrate(20)
+              }}
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                foldMode !== 'crease' && foldMode !== 'full-paper'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md shadow-pink-500/30'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              title="Pinch: crease only where lines are drawn"
             >
-              Fit
+              <span>Pinch</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onFoldModeChange('crease')
+                soundManager.vibrate(20)
+              }}
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                foldMode === 'crease' || foldMode === 'full-paper'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              title="Crease: full paper fold edge-to-edge"
+            >
+              <span>Crease</span>
             </button>
           </div>
-        )}
+        </div>
 
         {/* Floating Contextual Tip on Photo (Hides during drawing so photo is never blocked) */}
         {!isDrawing && scale <= 1.05 && (

@@ -40,6 +40,7 @@ export async function createTransitionGIF(
     yBottom: new Float32Array(targetW),
     gap: new Float32Array(targetW),
     maxGap: foldMap.maxGap * (targetW / sourceCanvas.width),
+    mode: foldMap.mode,
   }
   const ratioX = sourceCanvas.width / targetW
   for (let x = 0; x < targetW; x++) {
@@ -148,6 +149,7 @@ export async function createBeforeAfterSnapGIF(
     yBottom: new Float32Array(targetW),
     gap: new Float32Array(targetW),
     maxGap: foldMap.maxGap * (targetW / sourceCanvas.width),
+    mode: foldMap.mode,
   }
   const ratioX = sourceCanvas.width / targetW
   for (let x = 0; x < targetW; x++) {

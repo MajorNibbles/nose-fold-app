@@ -25,6 +25,8 @@ export function renderFoldedCanvas(
   const sourceImageData = sourceCtx.getImageData(0, 0, width, height)
   const srcData = sourceImageData.data
 
+  const isPinch = foldMap.mode === 'pinch'
+
   // Calculate destination height
   let avgGap = 0
   for (let x = 0; x < width; x++) {
@@ -33,7 +35,10 @@ export function renderFoldedCanvas(
   avgGap /= width
 
   const collapsedAmount = avgGap * foldProgress
-  const destHeight = trimToFoldHeight
+  // In pinch mode, preserve full canvas height so outer uncollapsed areas are never cropped
+  const destHeight = isPinch
+    ? height
+    : trimToFoldHeight
     ? Math.max(50, Math.round(height - collapsedAmount))
     : height
 
@@ -46,8 +51,8 @@ export function renderFoldedCanvas(
   const destImageData = targetCtx.createImageData(width, destHeight)
   const dstData = destImageData.data
 
-  // Clear / fill background with solid black if full frame
-  if (!trimToFoldHeight) {
+  // Clear / fill background with solid black if full frame in crease mode
+  if (!isPinch && !trimToFoldHeight) {
     const isTransparent = options.canvasBgColor === 'transparent'
     const bgA = isTransparent ? 0 : 255
     for (let i = 0; i < dstData.length; i += 4) {
@@ -58,8 +63,8 @@ export function renderFoldedCanvas(
     }
   }
 
-  // Vertical offset: 0 if anchored at top or trimmed, otherwise centered
-  const yOffset = trimToFoldHeight || anchorTop ? 0 : Math.round(collapsedAmount * 0.5)
+  // Vertical offset: 0 if anchored at top, trimmed, or pinch mode
+  const yOffset = isPinch || trimToFoldHeight || anchorTop ? 0 : Math.round(collapsedAmount * 0.5)
 
   for (let x = 0; x < width; x++) {
     const yTop = foldMap.yTop[x]
@@ -70,7 +75,21 @@ export function renderFoldedCanvas(
       // Corresponding Y in source space
       let srcY: number
 
-      if (trimToFoldHeight) {
+      if (isPinch) {
+        if (gap <= 0.001 || currentShift <= 0.001) {
+          // Column outside crease: 100% original unshifted pixels
+          srcY = y
+        } else if (y < yTop) {
+          // Pixels above crease line
+          srcY = y
+        } else {
+          // In pinch mode, mouth meets eyes at yTop, and shift smoothly returns to 0 at image bottom
+          const remainingH = Math.max(1, height - yTop)
+          const fraction = (y - yTop) / remainingH
+          const localShift = currentShift * (1 - fraction)
+          srcY = y + localShift
+        }
+      } else if (trimToFoldHeight) {
         if (y < yTop) {
           srcY = y
         } else {
@@ -108,20 +127,24 @@ export function renderFoldedCanvas(
       let b = srcData[srcIdx1 + 2] * (1 - fracY) + srcData[srcIdx2 + 2] * fracY
       const a = srcData[srcIdx1 + 3] * (1 - fracY) + srcData[srcIdx2 + 3] * fracY
 
-      // Optional paper crease shadow & highlight effect
-      if (showCreaseShadow && foldProgress > 0.05) {
-        const seamY = trimToFoldHeight ? yTop : yTop + yOffset
+      // Crease shadow & highlight effect
+      if (showCreaseShadow && foldProgress > 0.05 && gap > 0.5) {
+        const shadowIntensity = isPinch && foldMap.maxGap > 0
+          ? Math.min(1.0, gap / foldMap.maxGap)
+          : 1.0
+
+        const seamY = isPinch || trimToFoldHeight ? yTop : yTop + yOffset
         const distToSeam = y - seamY
 
         if (distToSeam >= -3 && distToSeam < 0) {
           // Subtle drop shadow above the fold
-          const shadowFactor = 1 - (0.22 * foldProgress * (1 - Math.abs(distToSeam) / 3))
+          const shadowFactor = 1 - (0.22 * foldProgress * (1 - Math.abs(distToSeam) / 3) * shadowIntensity)
           r *= shadowFactor
           g *= shadowFactor
           b *= shadowFactor
         } else if (distToSeam >= 0 && distToSeam <= 3) {
           // Subtle paper edge rim highlight
-          const highlightFactor = 1 + (0.18 * foldProgress * (1 - distToSeam / 3))
+          const highlightFactor = 1 + (0.18 * foldProgress * (1 - distToSeam / 3) * shadowIntensity)
           r = Math.min(255, r * highlightFactor)
           g = Math.min(255, g * highlightFactor)
           b = Math.min(255, b * highlightFactor)

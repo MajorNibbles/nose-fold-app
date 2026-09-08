@@ -60,7 +60,9 @@ export function App() {
   // Drawing strokes
   const [topStroke, setTopStroke] = useState<Stroke>(saved?.topStroke ?? [])
   const [bottomStroke, setBottomStroke] = useState<Stroke>(saved?.bottomStroke ?? [])
-  const [foldMode, setFoldMode] = useState<FoldMode>(saved?.foldMode ?? 'full-paper')
+  const [foldMode, setFoldMode] = useState<FoldMode>(
+    saved?.foldMode === 'crease' || saved?.foldMode === 'full-paper' ? 'crease' : 'pinch'
+  )
 
   // Auto-save state to sessionStorage so mobile background tab switches or memory pressure never lose progress
   useEffect(() => {
@@ -272,6 +274,8 @@ export function App() {
               showCreaseShadow={showCreaseShadow}
               onToggleCreaseShadow={setShowCreaseShadow}
               trimToFoldHeight={trimToFoldHeight}
+              foldMode={foldMode}
+              onFoldModeChange={setFoldMode}
             />
           </>
         )}

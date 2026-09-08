@@ -5,7 +5,7 @@ export interface Point {
 
 export type Stroke = Point[]
 
-export type FoldMode = 'full-paper' | 'local-pinch'
+export type FoldMode = 'pinch' | 'crease' | 'full-paper' | 'local-pinch'
 
 export interface FoldCurves {
   topCurve: Point[]
@@ -18,6 +18,7 @@ export interface ColumnFoldMap {
   yBottom: Float32Array
   gap: Float32Array
   maxGap: number
+  mode?: FoldMode
 }
 
 export type ActiveTool = 'draw-top' | 'draw-bottom' | 'folded'

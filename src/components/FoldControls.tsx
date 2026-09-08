@@ -20,7 +20,7 @@ import {
 import { soundManager } from '../utils/soundEffects'
 import { shareFaceFoldApp } from '../utils/shareUtils'
 import confetti from 'canvas-confetti'
-import type { ColumnFoldMap } from '../types/fold'
+import type { ColumnFoldMap, FoldMode } from '../types/fold'
 import {
   downloadFile,
   createTransitionGIF,
@@ -41,6 +41,8 @@ interface FoldControlsProps {
   showCreaseShadow: boolean
   onToggleCreaseShadow: (val: boolean) => void
   trimToFoldHeight?: boolean
+  foldMode?: FoldMode
+  onFoldModeChange?: (mode: FoldMode) => void
 }
 
 export const FoldControls: React.FC<FoldControlsProps> = ({
@@ -53,6 +55,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
   showCreaseShadow,
   onToggleCreaseShadow,
   trimToFoldHeight = true,
+  foldMode,
+  onFoldModeChange,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -370,50 +374,90 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
           </div>
         </div>
 
-        {/* Secondary Toggles: Crease & Boost */}
+        {/* Secondary Toggles: Mode (Pinch vs Crease), Shadow & Boost */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-          <button
-            type="button"
-            onClick={() => onToggleCreaseShadow(!showCreaseShadow)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-              showCreaseShadow
-                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                : 'bg-slate-800/60 border-slate-700 text-slate-400'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Crease</span>
-          </button>
+          {/* Mode Switcher: Pinch vs Crease */}
+          {foldMode && onFoldModeChange ? (
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+              <button
+                type="button"
+                onClick={() => {
+                  onFoldModeChange('pinch')
+                  soundManager.vibrate(20)
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  foldMode !== 'crease' && foldMode !== 'full-paper'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Pinch: fold only where lines are drawn"
+              >
+                Pinch
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onFoldModeChange('crease')
+                  soundManager.vibrate(20)
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  foldMode === 'crease' || foldMode === 'full-paper'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Crease: full paper fold edge-to-edge"
+              >
+                Crease
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
 
-          <button
-            type="button"
-            onClick={() => {
-              soundManager.playFoldSound(true)
-              setIsBoosted((prev) => {
-                const next = !prev
-                if (next) {
-                  onFoldProgressChange(Math.max(1.35, foldProgress))
-                } else if (foldProgress > 1.0) {
-                  onFoldProgressChange(1.0)
-                }
-                return next
-              })
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold transition active:scale-95 cursor-pointer ${
-              isBoosted
-                ? 'bg-gradient-to-r from-amber-500/25 to-rose-500/25 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/20'
-                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
-            }`}
-            title="Boost fold past 100%"
-          >
-            <Rocket className="w-3.5 h-3.5 text-amber-400" />
-            <span>Boost</span>
-            {isBoosted && (
-              <span className="text-[10px] text-amber-300 font-mono bg-amber-500/20 px-1 rounded">
-                200%
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToggleCreaseShadow(!showCreaseShadow)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                showCreaseShadow
+                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                  : 'bg-slate-800/60 border-slate-700 text-slate-400'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Shadow</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playFoldSound(true)
+                setIsBoosted((prev) => {
+                  const next = !prev
+                  if (next) {
+                    onFoldProgressChange(Math.max(1.35, foldProgress))
+                  } else if (foldProgress > 1.0) {
+                    onFoldProgressChange(1.0)
+                  }
+                  return next
+                })
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold transition active:scale-95 cursor-pointer ${
+                isBoosted
+                  ? 'bg-gradient-to-r from-amber-500/25 to-rose-500/25 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/20'
+                  : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Boost fold past 100%"
+            >
+              <Rocket className="w-3.5 h-3.5 text-amber-400" />
+              <span>Boost</span>
+              {isBoosted && (
+                <span className="text-[10px] text-amber-300 font-mono bg-amber-500/20 px-1 rounded">
+                  200%
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
