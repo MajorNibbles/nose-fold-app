@@ -259,28 +259,35 @@ export function createSideBySideSnapshot(
 }
 
 /**
- * Draws the clean, minimal "FaceFold" watermark pill in the top-left of any canvas.
+ * Draws the clean, minimal "FaceFold.app" watermark pill in the top-right of any canvas.
  * Responsively scales to fit small GIFs and high-resolution photos alike.
  */
 export function drawFaceFoldWatermark(
   ctx: CanvasRenderingContext2D,
-  x: number = 14,
-  y: number = 14
+  marginX: number = 14,
+  marginY: number = 14,
+  position: 'top-right' | 'top-left' = 'top-right'
 ) {
   ctx.save()
   const canvasW = ctx.canvas?.width || 400
   const scale = Math.max(1, Math.min(3.5, canvasW / 400))
   const fontSize = Math.round(12 * scale)
-  const padX = Math.round(8 * scale)
-  const boxH = Math.round(22 * scale)
+  const padX = Math.round(9 * scale)
+  const boxH = Math.round(23 * scale)
   const radius = Math.round(6 * scale)
-  const actualX = Math.round(x * (scale > 1.5 ? scale * 0.75 : 1))
-  const actualY = Math.round(y * (scale > 1.5 ? scale * 0.75 : 1))
+  const marginScaledX = Math.round(marginX * (scale > 1.5 ? scale * 0.75 : 1))
+  const marginScaledY = Math.round(marginY * (scale > 1.5 ? scale * 0.75 : 1))
 
   ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
-  const text = 'FaceFold'
+  const text = 'FaceFold.app'
   const metrics = ctx.measureText(text)
   const boxW = metrics.width + padX * 2
+
+  const actualX =
+    position === 'top-right'
+      ? canvasW - boxW - marginScaledX
+      : marginScaledX
+  const actualY = marginScaledY
 
   // Translucent dark glass pill
   ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'

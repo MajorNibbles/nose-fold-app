@@ -175,19 +175,15 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
           className="w-full h-full object-contain transition-transform duration-75"
         />
 
-        {/* Top-Left: FaceFold badge */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
-          <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-md text-white/90 border border-white/10 shadow-lg flex items-center gap-1.5">
+        {/* Top-Right: FaceFold.app badge & Fullscreen Button */}
+        <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-2 z-10">
+          <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-md text-white/90 border border-white/10 shadow-lg flex items-center gap-1.5 pointer-events-none">
             <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-            <span>FaceFold</span>
+            <span>FaceFold.app</span>
           </div>
-        </div>
-
-        {/* Top-Right: Fullscreen Button */}
-        <div className="absolute top-4 right-4 flex items-center gap-2">
           <button
             onClick={handleToggleFullscreen}
-            className="p-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md transition active:scale-95 cursor-pointer"
             title="Full Screen"
           >
             <Maximize2 className="w-4 h-4" />
@@ -206,7 +202,7 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
             {/* Minimal Brand indicator */}
             <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-900/90 text-white border border-slate-700/80 shadow-xl flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-              <span>FaceFold</span>
+              <span>FaceFold.app</span>
             </div>
 
             {/* Actions: GIF, Download & Close */}
