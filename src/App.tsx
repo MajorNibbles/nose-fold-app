@@ -243,7 +243,7 @@ export function App() {
       <AddToHomePrompt />
 
       {/* Google AdSense Responsive Banner */}
-      <AdBanner />
+      <AdBanner adClient="ca-pub-8578537568978893" />
 
       {/* SEO, AdSense Compliance, How-It-Works & FAQ Content */}
       <InfoSection
