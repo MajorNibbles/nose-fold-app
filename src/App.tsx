@@ -201,6 +201,10 @@ export function App() {
   const handleStep2Complete = () => {
     soundManager.playFoldSound(true)
     setFoldProgress(1.0)
+    try {
+      const currentCount = parseInt(localStorage.getItem('facefold_folds_completed_count') || '0', 10)
+      localStorage.setItem('facefold_folds_completed_count', (currentCount + 1).toString())
+    } catch {}
     trackEvent('step_button_click', {
       step: 2,
       target_step: 3,

@@ -2,7 +2,11 @@ import React, { useRef, useEffect, useState, useCallback } from 'react'
 import type { Point, Stroke, FoldMode } from '../types/fold'
 import { computeFoldMap } from '../utils/curveUtils'
 import { soundManager } from '../utils/soundEffects'
-import { RotateCcw, ArrowRight, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react'
+import { RotateCcw, ArrowRight, ZoomIn, ZoomOut, ArrowLeft, X } from 'lucide-react'
+import { trackEvent } from '../utils/analytics'
+
+const COMPLETED_FOLDS_KEY = 'facefold_folds_completed_count'
+const DISMISSED_TIP_KEY = 'facefold_dismissed_creative_tip'
 
 interface DrawingCanvasProps {
   imageSrc: string
@@ -40,6 +44,27 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     clientY: number
     canvasPt: Point
   } | null>(null)
+
+  // Creative idea bubble on 2nd+ visit: "Why not try and fold other parts!"
+  const [showCreativeBubble, setShowCreativeBubble] = useState(() => {
+    try {
+      const folds = parseInt(localStorage.getItem(COMPLETED_FOLDS_KEY) || '0', 10)
+      const dismissed = localStorage.getItem(DISMISSED_TIP_KEY) === 'true'
+      return folds >= 1 && !dismissed
+    } catch {
+      return false
+    }
+  })
+
+  const handleDismissCreativeTip = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowCreativeBubble(false)
+    try {
+      localStorage.setItem(DISMISSED_TIP_KEY, 'true')
+    } catch {}
+    soundManager.vibrate(15)
+    trackEvent('dismiss_creative_tip')
+  }
 
   // Pinch-to-zoom & Pan state
   const [scale, setScale] = useState(1.0)
@@ -645,6 +670,25 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Creative Idea Bubble for 2nd+ Visits: "Why not try and fold other parts!" */}
+        {showCreativeBubble && !isDrawing && scale <= 1.05 && (
+          <div className="absolute top-12 sm:top-14 left-1/2 -translate-x-1/2 z-25 max-w-[94%] sm:max-w-sm w-max bg-gradient-to-r from-purple-950/95 via-slate-900/95 to-slate-950/95 border border-purple-500/50 shadow-2xl shadow-purple-500/20 backdrop-blur-md rounded-2xl py-1 px-3 flex items-center justify-between gap-2 animate-fadeIn select-none ring-1 ring-purple-400/40">
+            <div className="flex items-center gap-1.5 text-xs text-purple-100 font-semibold truncate">
+              <span className="text-sm shrink-0">💡</span>
+              <span className="truncate">Why not try and fold other parts!</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissCreativeTip}
+              className="p-1 rounded-lg hover:bg-slate-800 text-purple-300 hover:text-white transition cursor-pointer shrink-0"
+              title="Dismiss tip"
+              aria-label="Dismiss tip"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Floating Contextual Tip on Photo (Hides during drawing so photo is never blocked) */}
         {!isDrawing && scale <= 1.05 && (
