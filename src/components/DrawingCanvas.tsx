@@ -263,10 +263,24 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ctx.fillStyle = '#0b0e14'
       ctx.fillRect(0, 0, w, h)
 
-      // Slice calculation from main canvas
+      // Slice calculation from main canvas taking into account content box
       const rect = canvas.getBoundingClientRect()
-      const canvasScaleX = canvas.width / rect.width
-      const canvasScaleY = canvas.height / rect.height
+      const cw = canvas.width
+      const ch = canvas.height
+      const imageRatio = cw / ch
+      const boxRatio = rect.width / rect.height
+
+      let contentWidth = rect.width
+      let contentHeight = rect.height
+
+      if (boxRatio > imageRatio) {
+        contentWidth = rect.height * imageRatio
+      } else if (boxRatio < imageRatio) {
+        contentHeight = rect.width / imageRatio
+      }
+
+      const canvasScaleX = contentWidth > 0 ? cw / contentWidth : 1
+      const canvasScaleY = contentHeight > 0 ? ch / contentHeight : 1
 
       const sw = (logicalSize / zoom) * canvasScaleX
       const sh = (logicalSize / zoom) * canvasScaleY
@@ -361,16 +375,44 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     return { x: posX, y: posY }
   }
 
-  // Pointer position helpers
-  const getCanvasPoint = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
+  // Pointer position helpers with precise content box mapping for letterboxing/pillarboxing
+  const getCanvasPoint = (e: { clientX: number; clientY: number }): Point => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
+    if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 }
+
+    const cw = canvas.width
+    const ch = canvas.height
+    if (cw <= 0 || ch <= 0) return { x: 0, y: 0 }
+
+    const imageRatio = cw / ch
+    const boxRatio = rect.width / rect.height
+
+    let contentWidth = rect.width
+    let contentHeight = rect.height
+    let offsetX = 0
+    let offsetY = 0
+
+    if (boxRatio > imageRatio) {
+      // DOM element is wider than image (pillarbox bars on left and right)
+      contentWidth = rect.height * imageRatio
+      offsetX = (rect.width - contentWidth) / 2
+    } else if (boxRatio < imageRatio) {
+      // DOM element is taller than image (letterbox bars on top and bottom)
+      contentHeight = rect.width / imageRatio
+      offsetY = (rect.height - contentHeight) / 2
+    }
+
+    const relX = e.clientX - rect.left - offsetX
+    const relY = e.clientY - rect.top - offsetY
+
+    const normX = contentWidth > 0 ? relX / contentWidth : 0
+    const normY = contentHeight > 0 ? relY / contentHeight : 0
+
     return {
-      x: Math.max(0, Math.min(canvas.width, (e.clientX - rect.left) * scaleX)),
-      y: Math.max(0, Math.min(canvas.height, (e.clientY - rect.top) * scaleY)),
+      x: Math.max(0, Math.min(cw, normX * cw)),
+      y: Math.max(0, Math.min(ch, normY * ch)),
     }
   }
 
@@ -493,30 +535,57 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPinchingRef.current || !isDrawing) return
-    const pt = getCanvasPoint(e)
-    if (showLoupe) updateLoupePoint(e, pt)
-    setCurrentStroke((prev) => {
-      // Avoid micro duplicates
-      const last = prev[prev.length - 1]
-      if (last && Math.hypot(last.x - pt.x, last.y - pt.y) < 3) {
-        return prev
+
+    // Capture all high-frequency touch positions via coalesced events if available
+    const points: Point[] = []
+    const evWithCoalesced = e.nativeEvent as PointerEvent
+    if (typeof evWithCoalesced.getCoalescedEvents === 'function') {
+      const coalesced = evWithCoalesced.getCoalescedEvents()
+      for (const ev of coalesced) {
+        points.push(getCanvasPoint(ev))
       }
-      return [...prev, pt]
+    }
+    if (points.length === 0) {
+      points.push(getCanvasPoint(e))
+    }
+
+    const latestPt = points[points.length - 1]
+    if (showLoupe) updateLoupePoint(e, latestPt)
+
+    setCurrentStroke((prev) => {
+      let next = prev
+      for (const pt of points) {
+        const last = next[next.length - 1]
+        // Avoid micro duplicate points
+        if (!last || Math.hypot(last.x - pt.x, last.y - pt.y) >= 2) {
+          next = next === prev ? [...prev, pt] : [...next, pt]
+        }
+      }
+      return next
     })
   }
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e?: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return
     setIsDrawing(false)
     setLoupePoint(null)
 
-    if (currentStroke.length > 2) {
+    let strokeToSave = currentStroke
+    if (e) {
+      const finalPt = getCanvasPoint(e)
+      const last = currentStroke[currentStroke.length - 1]
+      if (!last || Math.hypot(last.x - finalPt.x, last.y - finalPt.y) >= 2) {
+        strokeToSave = [...currentStroke, finalPt]
+      }
+    }
+
+    if (strokeToSave.length > 2) {
       soundManager.vibrate(20)
       if (activeLine === 'top') {
-        onTopStrokeChange(currentStroke)
+        onTopStrokeChange(strokeToSave)
         setActiveLine('bottom')
       } else {
-        onBottomStrokeChange(currentStroke)
+        onBottomStrokeChange(strokeToSave)
       }
     }
     setCurrentStroke([])
@@ -554,10 +623,11 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onWheel={handleWheel}
-        className="relative w-full max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none mx-auto"
+        className="relative max-w-full bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center touch-none-all select-none mx-auto"
         style={{
           aspectRatio: image && image.naturalWidth && image.naturalHeight ? `${image.naturalWidth} / ${image.naturalHeight}` : '4 / 5',
           maxHeight: 'min(53dvh, 530px)',
+          width: image && image.naturalWidth && image.naturalHeight ? `min(100%, calc(min(53dvh, 530px) * ${image.naturalWidth / image.naturalHeight}))` : '100%',
           touchAction: 'none',
           overscrollBehavior: 'none',
         }}
@@ -570,7 +640,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onPointerCancel={() => handlePointerUp()}
             className="w-full h-full object-contain cursor-crosshair touch-none-all will-change-transform"
             style={{
               touchAction: 'none',
