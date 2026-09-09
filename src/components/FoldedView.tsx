@@ -3,6 +3,7 @@ import type { ColumnFoldMap } from '../types/fold'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
 import { soundManager } from '../utils/soundEffects'
 import { downloadFile, drawFaceFoldWatermark } from '../utils/gifExport'
+import { trackEvent } from '../utils/analytics'
 import confetti from 'canvas-confetti'
 import {
   Sparkles,
@@ -129,6 +130,8 @@ export const FoldedView: React.FC<FoldedViewProps> = ({
     })
     soundManager.playPaperCrease()
     soundManager.vibrate(30)
+    trackEvent('download_photo', { format: 'png', source: 'quick_download', fold_mode: foldMap.mode || 'crease' })
+    trackEvent('file_download', { file_name: 'folded_photo_quick', file_extension: 'png', fold_mode: foldMap.mode || 'crease' })
 
     setDownloadSuccess(true)
     setTimeout(() => setDownloadSuccess(false), 2000)

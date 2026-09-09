@@ -30,6 +30,7 @@ import {
 } from '../utils/gifExport'
 import { renderFoldedCanvas } from '../utils/imageCollapse'
 import { copyCanvasAsNormalImage } from '../utils/imageUtils'
+import { trackEvent } from '../utils/analytics'
 
 interface FoldControlsProps {
   foldProgress: number
@@ -156,6 +157,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
       downloadFile(blob, `facefold-loop-${Date.now()}.gif`)
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
       soundManager.playFoldSound(true)
+      trackEvent('download_transition_gif', { format: 'gif' })
+      trackEvent('file_download', { file_name: 'loop_gif', file_extension: 'gif' })
     } finally {
       setIsExportingTransition(false)
     }
@@ -176,6 +179,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
       downloadFile(blob, `facefold-snap-${Date.now()}.gif`)
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
       soundManager.playPaperCrease()
+      trackEvent('download_snap_gif', { format: 'gif' })
+      trackEvent('file_download', { file_name: 'snap_gif', file_extension: 'gif' })
     } finally {
       setIsExportingSnap(false)
     }
@@ -192,6 +197,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
     downloadFile(dataUrl, `facefold-split-${Date.now()}.png`)
     confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
     soundManager.playPaperCrease()
+    trackEvent('download_split_photo', { format: 'png' })
+    trackEvent('file_download', { file_name: 'split_photo', file_extension: 'png' })
   }
 
   // 4. Save Single Picture (PNG)
@@ -214,6 +221,8 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } })
       soundManager.playPaperCrease()
       soundManager.vibrate(30)
+      trackEvent('download_photo', { format: 'png', fold_mode: foldMap.mode || 'crease' })
+      trackEvent('file_download', { file_name: 'folded_photo', file_extension: 'png', fold_mode: foldMap.mode || 'crease' })
       setDownloadSuccess(true)
       setTimeout(() => setDownloadSuccess(false), 2000)
     }
@@ -240,6 +249,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
           setCopied(true)
           soundManager.playPaperCrease()
           soundManager.vibrate(30)
+          trackEvent('copy_photo_clipboard', { fold_mode: foldMap.mode || 'crease' })
           setTimeout(() => setCopied(false), 2500)
         } else {
           handleDownloadImage()
@@ -291,6 +301,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
           title: 'FaceFold Photo',
           text: 'Check out my FaceFold photo! Fold your own face here: https://majornibbles.github.io/nose-fold-app/',
         })
+        trackEvent('share_photo', { method: 'native_share' })
       } else {
         await handleCopyToClipboard()
       }
@@ -303,6 +314,7 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
   const handleShareWithFriends = async () => {
     soundManager.playPaperCrease()
     const res = await shareFaceFoldApp()
+    trackEvent('share_app_friends', { method: res.method || 'native' })
     if (res.success && res.method !== 'native') {
       setShareFeedback('Opened WhatsApp! Message & link copied to clipboard.')
       setTimeout(() => setShareFeedback(null), 4000)

@@ -138,6 +138,15 @@ export function App() {
     if (pushHistory) {
       window.history.pushState({ step: newStep }, '')
     }
+    const stepNames: Record<AppStep, string> = {
+      1: 'upload_crop',
+      2: 'draw_lines',
+      3: 'fold_reveal',
+    }
+    trackEvent('step_view', {
+      step_number: newStep,
+      step_name: stepNames[newStep],
+    })
   }, [])
 
   // Listen for browser popstate (triggered by Android swipe-left / back gestures)
@@ -178,6 +187,12 @@ export function App() {
       setImageSrc(croppedDataUrl)
     }
     soundManager.playPaperCrease()
+    trackEvent('step_button_click', {
+      step: 1,
+      target_step: 2,
+      button_name: 'next_step_draw_lines',
+    })
+    trackEvent('next_step_draw_lines')
     trackEvent('crop_complete')
     changeStep(2)
   }
@@ -186,7 +201,14 @@ export function App() {
   const handleStep2Complete = () => {
     soundManager.playFoldSound(true)
     setFoldProgress(1.0)
-    trackEvent('fold_created')
+    trackEvent('step_button_click', {
+      step: 2,
+      target_step: 3,
+      button_name: 'next_step_fold_face',
+      fold_mode: foldMode,
+    })
+    trackEvent('next_step_fold_face', { fold_mode: foldMode })
+    trackEvent('fold_created', { fold_mode: foldMode })
     changeStep(3)
   }
 
@@ -245,11 +267,22 @@ export function App() {
             topStroke={topStroke}
             bottomStroke={bottomStroke}
             foldMode={foldMode}
-            onFoldModeChange={setFoldMode}
+            onFoldModeChange={(mode) => {
+              setFoldMode(mode)
+              trackEvent('toggle_fold_mode', { mode, step: 2 })
+            }}
             onTopStrokeChange={setTopStroke}
             onBottomStrokeChange={setBottomStroke}
             onFoldReady={handleStep2Complete}
-            onBack={() => changeStep(1)}
+            onBack={() => {
+              trackEvent('step_button_click', {
+                step: 2,
+                target_step: 1,
+                button_name: 'back_to_crop',
+              })
+              trackEvent('step_back', { from_step: 2, to_step: 1 })
+              changeStep(1)
+            }}
           />
         )}
 
@@ -267,15 +300,34 @@ export function App() {
             <FoldControls
               foldProgress={foldProgress}
               onFoldProgressChange={setFoldProgress}
-              onAdjustLines={() => changeStep(2)}
-              onNewPhoto={() => changeStep(1)}
+              onAdjustLines={() => {
+                trackEvent('step_button_click', {
+                  step: 3,
+                  target_step: 2,
+                  button_name: 'edit_lines',
+                })
+                trackEvent('edit_lines_click')
+                changeStep(2)
+              }}
+              onNewPhoto={() => {
+                trackEvent('step_button_click', {
+                  step: 3,
+                  target_step: 1,
+                  button_name: 'new_photo',
+                })
+                trackEvent('new_photo_click')
+                changeStep(1)
+              }}
               imageSrc={imageSrc}
               foldMap={foldMap}
               showCreaseShadow={showCreaseShadow}
               onToggleCreaseShadow={setShowCreaseShadow}
               trimToFoldHeight={trimToFoldHeight}
               foldMode={foldMode}
-              onFoldModeChange={setFoldMode}
+              onFoldModeChange={(mode) => {
+                setFoldMode(mode)
+                trackEvent('toggle_fold_mode', { mode, step: 3 })
+              }}
             />
           </>
         )}
