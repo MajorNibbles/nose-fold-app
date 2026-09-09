@@ -649,7 +649,9 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         {/* Floating Contextual Tip on Photo (Hides during drawing so photo is never blocked) */}
         {!isDrawing && scale <= 1.05 && (
           <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/90 border border-slate-700/80 rounded-full px-3.5 py-1 text-slate-200 text-xs shadow-lg backdrop-blur-md flex items-center gap-2 whitespace-nowrap animate-fadeIn max-w-[92%] justify-center text-center">
-            {activeLine === 'top' ? (
+            {bothLinesDrawn ? (
+              <span className="text-emerald-300 font-semibold truncate">✨ Lines ready! Tap "Next Step" below</span>
+            ) : activeLine === 'top' ? (
               <span className="text-cyan-300 font-semibold truncate">👁️ Draw line below eyes</span>
             ) : (
               <span className="text-pink-300 font-semibold truncate">👄 Draw line above mouth</span>
@@ -778,18 +780,26 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         </div>
       </div>
 
-      {/* Primary Action: Full-Width Fold Button */}
+      {/* Primary Action: Next Step Fold Button */}
       <button
         type="button"
         disabled={!bothLinesDrawn}
         onClick={onFoldReady}
         className={`w-full mt-2 py-2.5 sm:py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition select-none ${
           bothLinesDrawn
-            ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/20 transform active:scale-98 cursor-pointer'
+            ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/25 transform active:scale-98 cursor-pointer ring-2 ring-pink-400/40'
             : 'bg-slate-800/60 text-slate-500 border border-slate-700/50 cursor-not-allowed opacity-50 shadow-none'
         }`}
       >
-        <span>Fold</span>
+        <span>
+          {bothLinesDrawn
+            ? 'Next Step: Fold Face!'
+            : topStroke.length <= 1 && bottomStroke.length <= 1
+            ? 'Draw Eye & Mouth Lines First'
+            : topStroke.length <= 1
+            ? 'Draw Eye Line to Continue'
+            : 'Draw Mouth Line to Continue'}
+        </span>
         <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
     </div>

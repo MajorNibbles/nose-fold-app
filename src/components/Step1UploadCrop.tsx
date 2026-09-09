@@ -725,18 +725,18 @@ export const Step1UploadCrop: React.FC<Step1UploadCropProps> = ({
         )}
       </div>
 
-      {/* 3. ADD LINE BUTTON (Disabled until image loaded) */}
+      {/* 3. NEXT STEP BUTTON (Disabled until image loaded) */}
       <button
         type="button"
         disabled={!hasUserImage}
         onClick={handleNextStep}
         className={`w-full py-3.5 px-6 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition select-none ${
           hasUserImage
-            ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/20 transform active:scale-98 cursor-pointer'
+            ? 'bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white shadow-xl shadow-pink-500/25 transform active:scale-98 cursor-pointer ring-2 ring-pink-400/40'
             : 'bg-slate-800/60 text-slate-500 border border-slate-700/50 cursor-not-allowed opacity-50 shadow-none'
         }`}
       >
-        <span>Add Line</span>
+        <span>{hasUserImage ? 'Next Step: Draw Lines' : 'Upload a Photo to Continue'}</span>
         <ArrowRight className="w-5 h-5" />
       </button>
     </div>
