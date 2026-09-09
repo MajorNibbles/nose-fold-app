@@ -61,7 +61,7 @@ export function App() {
   const [topStroke, setTopStroke] = useState<Stroke>(saved?.topStroke ?? [])
   const [bottomStroke, setBottomStroke] = useState<Stroke>(saved?.bottomStroke ?? [])
   const [foldMode, setFoldMode] = useState<FoldMode>(
-    saved?.foldMode === 'crease' || saved?.foldMode === 'full-paper' ? 'crease' : 'pinch'
+    saved?.foldMode === 'pinch' || saved?.foldMode === 'local-pinch' ? 'pinch' : 'crease'
   )
 
   // Auto-save state to sessionStorage so mobile background tab switches or memory pressure never lose progress

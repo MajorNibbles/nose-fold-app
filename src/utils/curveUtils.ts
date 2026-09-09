@@ -129,7 +129,7 @@ function rasterizeStroke(
 export function strokeToColumnY(
   rawStroke: Stroke,
   width: number,
-  mode: FoldMode = 'pinch'
+  mode: FoldMode = 'crease'
 ): { yValues: Float32Array; activeMask: Float32Array } {
   const yValues = new Float32Array(width)
   const activeMask = new Float32Array(width)
@@ -201,7 +201,7 @@ export function computeFoldMap(
   topStroke: Stroke,
   bottomStroke: Stroke,
   width: number,
-  mode: FoldMode = 'pinch'
+  mode: FoldMode = 'crease'
 ): ColumnFoldMap {
   const yTop = new Float32Array(width)
   const yBottom = new Float32Array(width)
