@@ -342,20 +342,33 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
               </span>
             </span>
 
-            {/* Accordion Flap Loop Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={`py-1.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition active:scale-95 cursor-pointer ${
-                isPlaying
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10'
-                  : 'bg-slate-800/80 hover:bg-slate-755 text-slate-300 border-slate-700'
-              }`}
-              title="Loop flap bounce"
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isPlaying ? 'Pause' : 'Bounce'}</span>
-            </button>
+            {/* Actions: Edit Lines & Bounce Flap Button */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={onAdjustLines}
+                className="py-1.5 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition active:scale-95 cursor-pointer"
+                title="Edit fold lines"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Edit Lines</span>
+              </button>
+
+              {/* Accordion Flap Loop Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`py-1.5 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition active:scale-95 cursor-pointer ${
+                  isPlaying
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10'
+                    : 'bg-slate-800/80 hover:bg-slate-755 text-slate-300 border-slate-700'
+                }`}
+                title="Loop flap bounce"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5" />}
+                <span>{isPlaying ? 'Pause' : 'Bounce'}</span>
+              </button>
+            </div>
           </div>
 
           <input
@@ -676,18 +689,11 @@ export const FoldControls: React.FC<FoldControlsProps> = ({
       </div>
 
       {/* 3. STEP NAVIGATION FOOTER */}
-      <div className="flex items-center justify-between gap-3">
+      <div>
         <button
-          onClick={onAdjustLines}
-          className="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Edit Lines</span>
-        </button>
-
-        <button
+          type="button"
           onClick={onNewPhoto}
-          className="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+          className="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5 text-pink-400" />
           <span>New Photo</span>
